@@ -1,0 +1,1833 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Código com Alma: IA, vibecoding e o futuro dos personagens nos jogos. Palestra de João Gabriel na Semana de Ciência e Tecnologia do IF.">
+<title>Código com Alma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Special+Elite&family=IM+Fell+English:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a dark clinic at night. The cursor is the doctor's lamp; each talk topic is a "day" on a path of footprints,
+   opening into a full-screen chamber of click-through beats. Palette and type come from the Eternal Darkness design
+   system (theme "Lamparina"; IM Fell English is its listed display fallback). Single dark look by design (projector). */
+:root {
+  --void: #0a0806;          /* the darkness everything is born from */
+  --surface: #14100c;       /* panels */
+  --raised: #1f1813;        /* controls at rest */
+  --lit: #2e2218;           /* lit control (hover) */
+  --line: #3a2e24;          /* decorative lines */
+  --line-strong: #8a6d45;   /* control borders, metal frames */
+  --text: #eadfc8;          /* bone */
+  --text-soft: #b9a98d;
+  --text-faint: #978670;
+  --paper-ink: #1e150e;     /* ink on paper */
+  --paper-ink-soft: #4b3a28;
+  --ember: #e0954f;         /* the lamp: the only warm accent */
+  --ember-dim: #8f5a2c;
+  --on-ember: #140d07;
+  --blood: #e5645a;         /* blood-text: readable red */
+  --blood-fill: #7d110d;
+  --blood-lit: #a3170f;
+  --entity: #aebcc2;        /* the Shadow / artificial minds */
+  --entity-fill: #141b1f;
+  --sanity: #a7b3b8;
+  --monitor: #54ff63;
+  --display: "IM Fell English", Georgia, "Times New Roman", serif;
+  --display-i: "IM Fell English", Georgia, serif;
+  --body: "Special Elite", "Courier New", Courier, monospace;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --step-0: clamp(16px, 1.2vw + 6px, 24px);
+  --step-1: clamp(19px, 1.7vw + 6px, 32px);
+  --step-2: clamp(26px, 2.8vw + 6px, 56px);
+  --step-3: clamp(34px, 4.6vw + 6px, 92px);
+  --gutter: max(16px, 3vw);
+  --mx: 50%; --my: 42%;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: var(--body);
+  font-size: var(--step-0);
+  line-height: 1.45;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; }
+h1, h2, h3 { margin: 0; font-weight: 400; text-wrap: balance; }
+p { margin: 0; }
+img { display: block; }
+
+/* atmosphere layers */
+#bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, transparent 30%, rgba(0,0,0,.82) 100%); }
+#lamp {
+  position: fixed; inset: 0; z-index: 6; pointer-events: none;
+  background: radial-gradient(circle at var(--mx) var(--my), rgba(255,158,82,.07) 0, rgba(5,4,5,0) 240px, rgba(5,4,5,.6) 620px);
+  transition: opacity .5s;
+}
+#lamp.off { opacity: 0; }
+#lamp.flick { opacity: .25; }
+#lamp.dark { background: rgba(3,3,4,.86); transition: none; }
+#grain {
+  position: fixed; inset: -50%; z-index: 7; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
+  animation: grain 1s steps(6) infinite;
+}
+@keyframes grain { 0% { transform: translate(0,0); } 20% { transform: translate(-3%,2%); } 40% { transform: translate(2%,-4%); } 60% { transform: translate(-4%,-1%); } 80% { transform: translate(3%,3%); } }
+#hurt { position: fixed; inset: 0; z-index: 8; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(143,4,3,.75) 100%); }
+#hurt.on { animation: hurt 1.4s ease-out; }
+@keyframes hurt { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+
+#app { position: relative; z-index: 2; height: 100%; }
+.screen {
+  position: absolute; inset: 0; display: grid;
+  padding-inline: var(--gutter); padding-block: 18px;
+  opacity: 0; visibility: hidden;
+  transition: opacity .7s ease, visibility 0s linear .7s;
+}
+.screen.on { opacity: 1; visibility: visible; transition: opacity .7s ease, visibility 0s; }
+
+/* ---------- shared bits ---------- */
+.eyebrow { font-family: var(--body); font-size: .62em; letter-spacing: .2em; text-transform: uppercase; color: var(--ember); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5em;
+  border: 1px solid var(--line-strong); background: var(--raised);
+  padding: .55em 1.2em; border-radius: 2px;
+  font-family: var(--body); font-size: calc(var(--step-0) * .82); letter-spacing: .14em; text-transform: uppercase;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.6);
+  transition: background .2s, border-color .2s, box-shadow .2s, transform .15s;
+}
+.btn:hover { background: var(--lit); border-color: var(--ember); box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 0 18px rgba(224,149,79,.25); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--ember); color: var(--on-ember); border-color: var(--ember); box-shadow: 0 0 22px rgba(224,149,79,.35); }
+.btn.primary:hover { background: #f0a965; }
+.btn.ghost { border-color: var(--line); background: transparent; color: var(--text-soft); box-shadow: none; }
+.btn.ghost:hover { color: var(--text); border-color: var(--line-strong); }
+.btn:disabled { opacity: .3; pointer-events: none; }
+.icon-btn {
+  border: 1px solid var(--line); background: rgba(10,8,6,.7); color: var(--text-faint);
+  border-radius: 2px; padding: .35em .75em; font-size: .62em; letter-spacing: .14em; text-transform: uppercase;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--line-strong); }
+.icon-btn[aria-pressed="false"] { opacity: .5; text-decoration: line-through; }
+
+/* ---------- title screen ---------- */
+#title { place-items: center; text-align: center; }
+.title-wrap { display: grid; gap: clamp(12px, 2.2vh, 26px); justify-items: center; max-width: 1100px; position: relative; z-index: 1; }
+.title-wrap .eyebrow { font-size: clamp(12px, .9vw + 4px, 18px); }
+.knock { font-family: var(--body); color: var(--text-faint); letter-spacing: .3em; font-size: clamp(13px, .8vw + 6px, 20px); }
+.knock span { display: inline-block; animation: knock 3.6s infinite; }
+.knock span:nth-child(2) { animation-delay: .18s; } .knock span:nth-child(3) { animation-delay: .36s; }
+@keyframes knock { 0%, 8% { transform: translateX(0); color: var(--text); } 4% { transform: translateX(-3px); } 12%, 100% { color: var(--text-faint); } }
+.game-title {
+  font-family: var(--display); font-size: clamp(56px, 10vw, 180px); line-height: .88;
+  color: var(--text); text-shadow: 0 0 50px rgba(224,149,79,.28), 0 4px 0 #000;
+}
+.game-title em { font-style: normal; color: var(--ember); }
+.subtitle { font-family: var(--display-i); font-style: italic; font-size: var(--step-1); color: var(--text-soft); }
+.byline { font-size: clamp(14px, .9vw + 6px, 21px); color: var(--text-soft); letter-spacing: .04em; }
+.byline strong { color: var(--text); font-weight: 400; }
+.start-btn { font-size: var(--step-0); padding: .75em 2em; animation: breathe 2.8s ease-in-out infinite; }
+@keyframes breathe { 0%,100% { box-shadow: 0 0 6px rgba(224,149,79,.25); } 50% { box-shadow: 0 0 40px rgba(224,149,79,.6); } }
+.hint { font-size: .6em; color: var(--text-faint); }
+.title-tools { position: absolute; top: 18px; right: var(--gutter); display: flex; gap: 8px; z-index: 2; }
+.props {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 16vh; pointer-events: none;
+  display: flex; align-items: flex-end; justify-content: center; gap: clamp(10px, 4vw, 70px);
+  padding-bottom: 2vh; opacity: .55;
+  background: linear-gradient(transparent, rgba(31,24,19,.5));
+}
+#finale .props { height: 12vh; opacity: .4; }
+.props img { max-height: 13vh; width: auto; height: auto; filter: drop-shadow(0 10px 12px #000) sepia(.2); }
+.props .p1 { width: clamp(40px, 5vw, 90px); }
+.props .p2 { width: clamp(24px, 2.6vw, 50px); transform: rotate(-70deg) translateY(10px); }
+.props .p3 { width: clamp(50px, 6vw, 110px); }
+.props .p4 { width: clamp(36px, 4.4vw, 80px); }
+.props .p5 { width: clamp(34px, 4vw, 72px); }
+
+/* ---------- map screen ---------- */
+#map { grid-template-rows: auto 1fr auto; gap: 10px; }
+.hud { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; position: relative; z-index: 9; }
+.hud-title { font-family: var(--display); font-size: var(--step-1); line-height: 1; }
+.hud-title span { color: var(--ember); }
+.gauge { flex: 1 1 240px; display: grid; gap: 4px; min-width: 0; max-width: 540px; margin-left: auto; }
+.gauge-label { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: .58em; letter-spacing: .16em; text-transform: uppercase; color: var(--text-soft); }
+.gauge-label b { color: var(--sanity); font-weight: 400; font-variant-numeric: tabular-nums; }
+.ecg { width: 90px; height: 18px; flex: none; }
+.ecg path { fill: none; stroke: var(--monitor); stroke-width: 1.6; stroke-dasharray: 60 140; animation: ecg 1.6s linear infinite; filter: drop-shadow(0 0 3px var(--monitor)); }
+@keyframes ecg { from { stroke-dashoffset: 200; } to { stroke-dashoffset: 0; } }
+.gauge-bar { height: 10px; border: 1px solid var(--line); background: #0d0a08; overflow: hidden; box-shadow: inset 0 2px 4px #000; }
+.gauge-fill { height: 100%; width: 0; background: linear-gradient(90deg, #5d676c, var(--sanity)); transition: width .9s cubic-bezier(.2,.8,.2,1); }
+.hud-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.map-area { position: relative; min-height: 0; }
+.map-area svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.path-base { fill: none; stroke: var(--line); stroke-width: 4; stroke-dasharray: 3 14; stroke-linecap: round; }
+.path-lit { fill: none; stroke: var(--ember); stroke-width: 3; stroke-linecap: round; filter: drop-shadow(0 0 6px var(--ember)); }
+.node { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 8px; background: none; border: 0; padding: 0; width: clamp(100px, 12vw, 176px); }
+.sigil {
+  width: clamp(54px, 5.4vw, 92px); aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--display); font-size: clamp(22px, 2.2vw, 40px); line-height: 1;
+  background: radial-gradient(circle at 50% 38%, var(--raised), var(--void));
+  border: 3px double var(--line-strong); color: var(--text-faint);
+  box-shadow: inset 0 3px 8px #000, 0 6px 14px #000;
+  transition: transform .25s, border-color .25s, box-shadow .25s, color .25s;
+}
+.node:hover .sigil { transform: scale(1.1); border-color: var(--ember); color: var(--text); }
+.node.done .sigil { border-color: var(--ember); color: var(--on-ember); background: radial-gradient(circle at 50% 40%, #ffd2a1, var(--ember) 55%, var(--ember-dim)); box-shadow: 0 0 26px rgba(255,158,82,.55); }
+.node.next .sigil { border-color: var(--ember); color: var(--text); animation: pulse 1.8s ease-in-out infinite; }
+.node.boss .sigil { width: clamp(66px, 6.6vw, 114px); border-color: var(--blood-lit); color: var(--blood); }
+.node.boss.next .sigil { animation: pulse-red 1.4s ease-in-out infinite; }
+.node.boss.done .sigil { border-color: var(--ember); color: var(--on-ember); }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 rgba(224,149,79,0), inset 0 3px 8px #000; } 50% { box-shadow: 0 0 34px rgba(224,149,79,.7), inset 0 3px 8px #000; } }
+@keyframes pulse-red { 0%,100% { box-shadow: 0 0 0 rgba(163,23,15,0); } 50% { box-shadow: 0 0 40px rgba(163,23,15,.9); } }
+.node-label { font-family: var(--display); font-size: clamp(14px, 1vw + 5px, 24px); line-height: 1.05; text-align: center; color: var(--text-soft); text-shadow: 0 2px 8px #000, 0 0 2px #000; }
+.node-kicker { display: block; font-family: var(--body); font-size: .56em; letter-spacing: .2em; text-transform: uppercase; color: var(--ember); margin-bottom: 3px; }
+.node.boss .node-kicker { color: var(--blood); }
+.node:hover .node-label, .node.next .node-label { color: var(--text); }
+
+.quest-log {
+  display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; align-items: center;
+  border-top: 1px solid var(--line); padding-block: 14px 4px; min-height: 92px; position: relative; z-index: 9;
+}
+.quest-log .ql-text { min-width: 0; display: grid; gap: 4px; }
+.ql-name { font-family: var(--display); font-size: var(--step-1); line-height: 1.05; }
+.ql-desc { color: var(--text-soft); max-width: 72ch; font-size: .82em; }
+
+/* ---------- stage screen ---------- */
+#stage { grid-template-rows: auto 1fr auto; gap: 8px; }
+.stage-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 10px; position: relative; z-index: 9; }
+.stage-head .sh-text { min-width: 0; flex: 1; }
+.stage-name { font-family: var(--display); font-size: var(--step-1); line-height: 1.05; }
+.stage-body { position: relative; overflow-y: auto; overflow-x: hidden; min-height: 0; display: grid; }
+.beat {
+  align-self: center; justify-self: center; width: 100%; max-width: 1200px;
+  display: grid; gap: clamp(14px, 2.4vh, 30px); padding-block: 22px;
+  animation: beat-in .6s cubic-bezier(.2,.8,.2,1);
+}
+.beat.back { animation-name: beat-in-back; }
+@keyframes beat-in { from { opacity: 0; transform: translateX(36px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes beat-in-back { from { opacity: 0; transform: translateX(-36px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.big { font-family: var(--display); font-size: var(--step-3); line-height: 1; }
+.big em, .mid em { font-style: normal; color: var(--ember); }
+.big em.red, .mid em.red { color: var(--blood); }
+.mid { font-family: var(--display); font-size: var(--step-2); line-height: 1.05; }
+.lead { font-size: var(--step-1); color: var(--text-soft); max-width: 48ch; line-height: 1.4; }
+.lead strong { color: var(--text); font-weight: 400; }
+.quote { font-family: var(--display); font-size: var(--step-2); line-height: 1.12; max-width: 26ch; position: relative; padding-left: .8em; }
+.quote::before { content: "\201C"; position: absolute; left: -.1em; top: -.2em; font-size: 2em; color: var(--ember); line-height: 1; }
+.quote em { color: var(--ember); font-style: normal; }
+.cite { font-size: .7em; letter-spacing: .16em; text-transform: uppercase; color: var(--text-faint); }
+.stage-foot { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid var(--line); flex-wrap: wrap; position: relative; z-index: 9; }
+.pips { display: flex; gap: 6px; flex: 1; justify-content: center; flex-wrap: wrap; }
+.pip { width: 26px; height: 6px; background: var(--line); border: 0; padding: 0; transition: background .3s; }
+.pip.seen { background: var(--ember-dim); }
+.pip.cur { background: var(--ember); box-shadow: 0 0 10px var(--ember); }
+#next-btn { min-width: 9em; }
+.panel { border: 1px solid var(--line); background: rgba(20,16,12,.9); box-shadow: inset 0 2px 10px rgba(0,0,0,.7); }
+
+/* figures with captions */
+.figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: clamp(12px, 2vw, 28px); align-items: start; }
+.fig { margin: 0; display: grid; gap: 8px; min-width: 0; }
+.fig img { width: 100%; height: auto; border: 1px solid var(--line-strong); box-shadow: 0 14px 30px #000; filter: sepia(.15) contrast(1.05); }
+.ph { display: grid; place-items: center; text-align: center; padding: 1.2em; border: 1px dashed var(--line-strong);
+  background: repeating-linear-gradient(135deg, rgba(255,255,255,.02) 0 12px, transparent 12px 24px), #120e0a;
+  color: var(--text-faint); font-family: var(--mono); font-size: .6em; letter-spacing: .08em; box-shadow: 0 14px 30px #000; }
+.fig figcaption { font-size: .66em; color: var(--text-faint); letter-spacing: .04em; }
+
+/* graveyard */
+.graves { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: clamp(12px, 2vw, 28px); align-items: end; }
+.grave {
+  border: 0; padding: 1.4em .8em 1em; text-align: center;
+  background: linear-gradient(180deg, #2d2620, #15110d);
+  border-radius: 48% 48% 4px 4px / 34% 34% 4px 4px;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.05), 0 18px 30px -12px #000;
+  display: grid; gap: .4em; justify-items: center; min-height: 11em; transition: transform .3s;
+}
+.grave:hover { transform: translateY(-6px) rotate(-1deg); }
+.grave .rip { font-family: var(--display); font-size: 1.5em; color: var(--text-faint); letter-spacing: .1em; }
+.grave .cause { font-family: var(--display); font-size: 1.15em; line-height: 1.1; color: var(--text); }
+.grave .epitaph { font-size: .7em; color: var(--text-soft); opacity: 0; transition: opacity .3s; }
+.grave.read .epitaph, .grave:hover .epitaph { opacity: 1; }
+
+/* quest cards (journey) */
+.quests { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: clamp(12px, 1.6vw, 22px); }
+.quest { padding: 1em 1.1em; display: grid; gap: .5em; align-content: start; min-width: 0; }
+.quest h3 { font-family: var(--display); font-size: var(--step-2); line-height: 1; }
+.quest p { color: var(--text-soft); font-size: .82em; }
+.quest b { color: var(--text); font-weight: 400; }
+.tag { display: inline-block; justify-self: start; font-size: .56em; letter-spacing: .16em; text-transform: uppercase; padding: .3em .6em; border: 1px solid currentColor; }
+.tag.noai { color: var(--text-faint); }
+.tag.ai { color: var(--entity); }
+
+/* flood of soulless games */
+.flood { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; }
+.flood i { aspect-ratio: 3/4; background: #18130f; border: 1px solid #241d17; animation: drop .5s backwards; }
+.flood i.soul { background: radial-gradient(circle at 50% 40%, #ffd2a1, var(--ember) 50%, var(--ember-dim)); border-color: var(--ember); box-shadow: 0 0 26px var(--ember); }
+@keyframes drop { from { opacity: 0; transform: translateY(-14px); } }
+
+/* stat */
+.stat-row { display: flex; gap: clamp(16px, 4vw, 70px); align-items: center; flex-wrap: wrap; }
+.stat { display: grid; gap: 2px; }
+.stat .num { font-family: var(--display); font-size: clamp(60px, 9.5vw, 180px); line-height: .9; font-variant-numeric: tabular-nums; }
+.stat .num.ember { color: var(--ember); text-shadow: 0 0 34px rgba(224,149,79,.45); }
+.stat .lbl { color: var(--text-soft); font-size: .78em; }
+.arrow { font-family: var(--display); font-size: var(--step-3); color: var(--line-strong); }
+
+/* checklist (gap) */
+.slots { display: grid; gap: 12px; max-width: 900px; }
+.slot { display: grid; grid-template-columns: 2.2em 1fr; align-items: center; gap: 14px; padding: .7em 1em; }
+.slot .mark { width: 2.2em; aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; border: 2px solid var(--ember); color: var(--ember); }
+.slot.gap { border-style: dashed; border-color: var(--entity); }
+.slot.gap .mark { border-color: var(--entity); color: var(--entity); }
+.slot b { font-weight: 400; color: var(--text); }
+.slot.gap b { color: var(--entity); }
+
+/* vibecoding loop */
+.loop-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(20px, 4vw, 60px); align-items: center; }
+.loop { position: relative; aspect-ratio: 1; max-width: 520px; width: 100%; justify-self: center; }
+.loop .ring { position: absolute; inset: 12%; border-radius: 50%; border: 2px dashed var(--line); animation: spin 30s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loop .center { position: absolute; inset: 30%; display: grid; place-items: center; text-align: center; font-size: var(--step-0); color: var(--text-soft); line-height: 1.15; }
+.loop .center b { display: block; color: var(--blood); font-family: var(--display); font-size: 1.9em; font-weight: 400; }
+.loop .st { position: absolute; transform: translate(-50%, -50%); width: 34%; text-align: center; padding: .45em .5em; border: 1px solid var(--line); background: var(--surface); font-size: .72em; line-height: 1.15; transition: all .3s; }
+.loop .st.hot { border-color: var(--ember); color: var(--on-ember); background: var(--ember); box-shadow: 0 0 22px rgba(224,149,79,.5); }
+.code { font-family: var(--mono); font-size: clamp(12px, .8vw + 5px, 19px); line-height: 1.55; background: #050405; border: 1px solid var(--line); padding: 1em 1.2em; overflow-x: auto; white-space: pre; color: #cdbf9f; max-width: 100%; }
+.code .k { color: var(--ember); } .code .c { color: #6b5c49; } .code .s { color: var(--entity); } .code .r { color: var(--blood); }
+
+/* choice */
+.scenario { padding: 1em 1.2em; display: grid; gap: .6em; max-width: 1000px; }
+.scenario .who { font-size: .62em; letter-spacing: .2em; text-transform: uppercase; color: var(--ember); }
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; max-width: 1000px; }
+.choice { text-align: left; border: 1px solid var(--line-strong); background: var(--raised); padding: .9em 1.1em; display: grid; gap: .25em; transition: border-color .2s, transform .2s, background .2s; }
+.choice:hover { border-color: var(--ember); background: var(--lit); transform: translateY(-2px); }
+.choice .key { font-family: var(--display); color: var(--ember); font-size: 1.3em; line-height: 1; }
+.outcome { max-width: 1000px; padding: 1em 1.2em; border-left: 4px solid; display: grid; gap: .3em; animation: beat-in .4s; position: relative; overflow: hidden; }
+.outcome.bad { border-color: var(--blood-lit); background: rgba(125,17,13,.22); }
+.outcome.good { border-color: var(--ember); background: rgba(224,149,79,.08); }
+.outcome h3 { font-family: var(--display); font-size: var(--step-2); line-height: 1; position: relative; }
+.outcome p { position: relative; }
+.outcome.bad h3 { color: var(--blood); }
+.outcome.good h3 { color: var(--ember); }
+.shake { animation: shake .45s; }
+@keyframes shake { 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+
+/* patient chart on the clipboard (character sheet) */
+.sheet { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1.4fr); gap: clamp(18px, 3vw, 54px); align-items: center; }
+.chart {
+  aspect-ratio: 988 / 1524; width: min(100%, 380px, calc(62vh * 988 / 1524)); justify-self: center;
+  color: var(--paper-ink); font-family: var(--display); position: relative;
+  container-type: inline-size; filter: drop-shadow(0 18px 24px #000);
+}
+/* clipboard drawn with CSS: wooden board, paper sheet, header plate and metal clip */
+.chart::before {
+  content: ""; position: absolute; inset: 8% 0 0 0; border-radius: 3.5% / 2.4%;
+  background:
+    radial-gradient(ellipse at 30% 40%, rgba(255,240,210,.35), transparent 60%) 50% 12.1% / 80% 24% no-repeat,
+    linear-gradient(170deg, #b49a72, #8f7550) 50% 12.1% / 80% 24% no-repeat,
+    radial-gradient(ellipse at 45% 45%, #ddcca8, #b7a07a 70%, #94794f) 50% 58% / 88% 87% no-repeat,
+    radial-gradient(circle at 20% 15%, rgba(120,30,20,.35), transparent 30%),
+    linear-gradient(160deg, #6e4c2e, #4a311d 60%, #3a2516);
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.35), inset 0 0 30px rgba(0,0,0,.55);
+}
+.chart::after {
+  content: ""; position: absolute; left: 25%; right: 25%; top: 7.5%; height: 9%;
+  border-radius: 6% / 14%;
+  background: linear-gradient(180deg, #8d8577, #4f483e 45%, #2f2a24);
+  box-shadow: 0 6px 10px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.chart-head, .chart-body { z-index: 1; }
+/* Text sits in two zones of the clipboard art: the dark header plate and the paper below it. */
+.chart-head { position: absolute; left: 17%; right: 15%; top: 20%; display: grid; gap: 1.2cqw; }
+.chart-head .pname { font-size: 8.6cqw; line-height: .98; color: var(--paper-ink); }
+.chart-body { position: absolute; left: 15%; right: 13%; top: 46%; display: grid; gap: 6cqw; font-size: 6.2cqw; line-height: 1.15; }
+.chart small { display: block; font-family: var(--body); font-size: 3.6cqw; letter-spacing: .18em; text-transform: uppercase; color: var(--paper-ink); opacity: .75; margin-bottom: .8cqw; }
+.attrs { display: grid; gap: 14px; }
+.attrs-title { font-size: .62em; letter-spacing: .2em; text-transform: uppercase; color: var(--text-soft); display: flex; align-items: center; gap: 10px; }
+.attr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; }
+.attr .av { font-family: var(--mono); color: var(--ember); font-variant-numeric: tabular-nums; font-size: .85em; }
+.attr .bar { grid-column: 1 / -1; height: 12px; background: #0d0a08; border: 1px solid var(--line); overflow: hidden; box-shadow: inset 0 2px 4px #000; }
+.attr .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ember-dim), var(--ember)); transition: width 1.1s cubic-bezier(.2,.8,.2,1); }
+.attr.low .bar i { background: linear-gradient(90deg, #3a1010, var(--blood-lit)); }
+.attr.low .av { color: var(--blood); }
+.attr .note { grid-column: 1 / -1; font-size: .66em; color: var(--text-faint); }
+
+/* versus */
+.versus { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: clamp(12px, 3vw, 40px); align-items: center; }
+.vs-card { padding: 1.1em 1.2em; display: grid; gap: .4em; min-width: 0; }
+.vs-card.then { opacity: .6; }
+.vs-card.now { border-color: var(--ember); }
+.vs-card .when { font-size: .6em; letter-spacing: .2em; text-transform: uppercase; color: var(--text-faint); }
+.vs-card.now .when { color: var(--ember); }
+.vs-card .what { font-family: var(--display); font-size: var(--step-2); line-height: 1; }
+.vs-card.then .what { text-decoration: line-through; text-decoration-color: var(--blood-lit); text-decoration-thickness: 4px; }
+.vs-card .sub { color: var(--text-soft); font-size: .8em; }
+.vs-mid { font-family: var(--display); color: var(--ember); font-size: var(--step-2); }
+
+/* flip cards */
+.flips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(10px, 1.5vw, 22px); perspective: 1200px; }
+.flip { border: 0; background: none; padding: 0; aspect-ratio: 16 / 9; position: relative; min-height: 7.5em; }
+.flip .face {
+  position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: .3em; text-align: center; padding: .8em;
+  border: 1px solid var(--line-strong); backface-visibility: hidden; transition: transform .6s cubic-bezier(.2,.8,.2,1);
+  box-shadow: inset 0 2px 12px rgba(0,0,0,.8);
+}
+.flip .front { background: radial-gradient(circle at 50% 40%, var(--raised), var(--void)); }
+.flip .front .q { font-family: var(--display); font-size: var(--step-1); line-height: 1.05; }
+.flip .front .tap { font-size: .56em; letter-spacing: .16em; text-transform: uppercase; color: var(--text-faint); }
+.flip .back { transform: rotateY(180deg); }
+.flip.flipped .front { transform: rotateY(-180deg); }
+.flip.flipped .back { transform: rotateY(0); }
+.flip .back.ok { background: rgba(224,149,79,.12); border-color: var(--ember); }
+.flip .back.no { background: rgba(125,17,13,.35); border-color: var(--blood-lit); }
+.flip .verdict { font-family: var(--display); font-size: var(--step-2); line-height: 1; }
+.flip .back.ok .verdict { color: var(--ember); }
+.flip .back.no .verdict { color: var(--blood); }
+.flip .back .q { font-family: var(--display); font-size: var(--step-0); }
+.flip .why { font-size: .66em; color: var(--text-soft); line-height: 1.3; }
+.counter { font-size: .64em; letter-spacing: .14em; text-transform: uppercase; color: var(--text-faint); }
+.counter b { color: var(--ember); font-weight: 400; }
+.example { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); gap: clamp(16px, 3vw, 50px); align-items: center; }
+.example .fig { max-width: 380px; justify-self: center; }
+
+/* NPC dialogue */
+.npc { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.6fr); gap: clamp(16px, 3vw, 44px); align-items: center; }
+.npc-figure { position: relative; aspect-ratio: 3/4; max-height: 52vh; justify-self: center; width: 100%; max-width: 340px; }
+.npc-figure svg { width: 100%; height: 100%; }
+.npc-figure .aura { transition: opacity .6s; opacity: 0; }
+.npc.ai .npc-figure .aura { opacity: 1; }
+.npc-box { display: grid; gap: 14px; min-width: 0; }
+.npc-name { font-family: var(--display); font-size: var(--step-2); line-height: 1; }
+.npc-name small { font-family: var(--body); font-size: .32em; letter-spacing: .16em; text-transform: uppercase; color: var(--text-faint); margin-left: .6em; vertical-align: middle; }
+.npc.ai .npc-name small { color: var(--entity); }
+.speech { padding: 1em 1.2em; min-height: 5.2em; font-size: var(--step-1); line-height: 1.35; }
+.npc.ai .speech { border-color: var(--entity); }
+.typed::after { content: "\258C"; color: var(--text-faint); animation: blink 1s steps(1) infinite; margin-left: 2px; }
+@keyframes blink { 50% { opacity: 0; } }
+.npc-opts { display: grid; gap: 8px; }
+.npc-opt { text-align: left; border: 1px solid var(--line); background: var(--raised); padding: .55em .9em; font-size: .9em; }
+.npc-opt:hover { border-color: var(--line-strong); background: var(--lit); }
+.npc-opt .n { color: var(--ember); margin-right: .5em; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; min-height: 1.8em; }
+.chip { font-size: .56em; letter-spacing: .14em; text-transform: uppercase; padding: .35em .7em; border-radius: 99px; border: 1px solid var(--line); color: var(--text-soft); }
+.chip.entity { border-color: var(--entity); color: var(--entity); }
+.chip.ember { border-color: var(--ember); color: var(--ember); }
+.chip.blood { border-color: var(--blood-lit); color: var(--blood); }
+.toggle { justify-self: start; border-color: var(--entity); color: var(--entity); background: var(--entity-fill); }
+.toggle:hover { background: #1d272c; border-color: var(--entity); }
+
+.pillars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 28px); }
+.pillar { border-top: 2px solid var(--entity); padding-top: .8em; display: grid; gap: .4em; align-content: start; min-width: 0; }
+.pillar h3 { font-family: var(--display); font-size: var(--step-2); line-height: 1; color: var(--entity); }
+.pillar p { color: var(--text-soft); font-size: .9em; }
+
+/* door demo (case) */
+.door-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: .58em; letter-spacing: .18em; text-transform: uppercase; color: var(--ember); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.door-head span:last-child { color: var(--text-faint); }
+.door { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.5fr); gap: clamp(16px, 3vw, 40px); align-items: start; }
+.peep-wrap { display: grid; gap: 8px; justify-items: center; }
+.peephole {
+  aspect-ratio: 1; width: 100%; max-width: 340px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, #2a1d12 0%, #0e0905 55%, #000 72%);
+  border: 12px solid #1f1813; box-shadow: inset 0 0 70px #000, 0 0 0 2px var(--line-strong), 0 20px 40px #000;
+  display: grid; place-items: end center; overflow: hidden; position: relative;
+}
+.peephole svg { width: 70%; height: 80%; }
+.peephole.flicker { animation: flicker .9s steps(2) 2; }
+@keyframes flicker { 0% { filter: brightness(1); } 25% { filter: brightness(.1); } 50% { filter: brightness(1.5) saturate(3) hue-rotate(-20deg); } 75% { filter: brightness(.05); } }
+.peep-cap { font-size: .56em; letter-spacing: .18em; text-transform: uppercase; color: var(--text-faint); text-align: center; }
+.sil.ASSUSTADO { animation: tremble .12s linear infinite; }
+.sil.MENTINDO { animation: sway 2.2s ease-in-out infinite; }
+.sil.DESESPERO { transform: translateY(6%) scaleY(.94); }
+@keyframes tremble { 0%,100% { transform: translateX(0); } 50% { transform: translateX(2px); } }
+@keyframes sway { 0%,100% { transform: translateX(-3%); } 50% { transform: translateX(3%); } }
+.pipeline { display: grid; gap: 10px; min-width: 0; }
+.pp { padding: .6em .9em; display: grid; gap: .25em; min-width: 0; }
+.pp .pl { font-size: .54em; letter-spacing: .18em; text-transform: uppercase; color: var(--text-faint); }
+.pp .pv { font-family: var(--mono); font-size: clamp(12px, .7vw + 6px, 18px); line-height: 1.45; overflow-wrap: anywhere; color: var(--text-soft); }
+.pp.hidden-prompt { border-color: var(--entity-fill); background: rgba(20,27,31,.85); }
+.pp.hidden-prompt .pl { color: var(--entity); }
+.pp.raw .pv .tagx { color: var(--blood); }
+.pp.shown { border-color: var(--line-strong); }
+.pp.shown .pl { color: var(--ember); }
+.pp.shown .pv { font-family: var(--body); font-size: var(--step-1); color: var(--text); }
+.door-opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.door-opt { text-align: left; border: 1px solid var(--line-strong); background: var(--raised); padding: .5em .8em; font-size: .8em; }
+.door-opt:hover { background: var(--lit); border-color: var(--ember); }
+.door-opt.dark { border-color: var(--blood-lit); color: var(--blood); background: rgba(125,17,13,.2); }
+.door-opt.dark:hover { background: rgba(125,17,13,.45); }
+.door-opt.picked { outline: 2px solid var(--ember); }
+
+.rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.rule { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; padding: .9em 1em; align-items: start; min-width: 0; }
+.rule .x { font-family: var(--display); color: var(--blood); font-size: 1.8em; line-height: 1; grid-row: span 2; }
+.rule h3 { font-family: var(--display); font-size: var(--step-1); line-height: 1.05; }
+.rule p { color: var(--text-soft); font-size: .8em; }
+
+.facts { display: flex; gap: 8px; flex-wrap: wrap; }
+.premise { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: clamp(16px, 3vw, 48px); align-items: center; }
+.case-title { font-family: var(--display); font-size: clamp(50px, 8vw, 150px); line-height: .86; text-shadow: 0 0 50px rgba(163,23,15,.45), 0 4px 0 #000; }
+.case-title span { display: block; color: var(--blood); }
+.mechs { display: grid; gap: 10px; }
+.mech { border-left: 3px solid var(--blood-lit); padding: .35em .9em; background: rgba(20,16,12,.85); }
+.mech b { font-family: var(--display); font-weight: 400; font-size: 1.3em; line-height: 1.1; }
+.mech span { display: block; color: var(--text-soft); font-size: .78em; }
+
+/* timeline */
+.trail { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); position: relative; }
+.trail::before { content: ""; position: absolute; left: 6%; right: 6%; top: 1.3em; height: 2px; background: var(--line); }
+.tstep { display: grid; justify-items: center; text-align: center; gap: .5em; padding: 0 .5em; position: relative; animation: drop .5s backwards; }
+.tstep .dot { width: 2.6em; height: 2.6em; border-radius: 50%; display: grid; place-items: center; border: 2px solid; background: var(--void); }
+.tstep.ok .dot { border-color: var(--ember); color: var(--ember); }
+.tstep.bad .dot { border-color: var(--blood-lit); color: var(--blood); box-shadow: 0 0 18px rgba(163,23,15,.5); }
+.tstep h3 { font-family: var(--display); font-size: var(--step-1); line-height: 1.05; }
+.tstep p { color: var(--text-soft); font-size: .76em; }
+
+.oaths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 30px; max-width: 1000px; }
+.oath { font-family: var(--display); font-size: var(--step-2); line-height: 1.05; display: flex; gap: .4em; align-items: baseline; animation: drop .5s backwards; }
+.oath::before { content: "\2020"; color: var(--ember); font-size: .7em; }
+
+/* finale */
+#finale { place-items: center; text-align: center; }
+.finale-wrap { display: grid; gap: clamp(14px, 3vh, 34px); justify-items: center; max-width: 1100px; position: relative; z-index: 1; }
+.finale-wrap .game-title { font-size: clamp(50px, 8vw, 150px); }
+.finale-stats { display: flex; gap: clamp(16px, 4vw, 60px); flex-wrap: wrap; justify-content: center; }
+.finale-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+/* toast */
+.toast {
+  position: fixed; left: 50%; top: 22%; transform: translate(-50%, -10px); z-index: 10;
+  font-family: var(--display); font-size: var(--step-2); color: var(--sanity); text-align: center;
+  text-shadow: 0 0 30px rgba(167,179,184,.5), 0 2px 10px #000;
+  opacity: 0; pointer-events: none; transition: opacity .4s, transform .4s;
+}
+.toast small { display: block; font-family: var(--body); font-size: .36em; letter-spacing: .2em; text-transform: uppercase; color: var(--text); }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- juice: particles, achievements, boss HP ---------- */
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 11; pointer-events: none; }
+.float-txt { position: fixed; z-index: 12; pointer-events: none; font-family: var(--display); font-size: var(--step-1); color: var(--ember); text-shadow: 0 0 14px rgba(224,149,79,.8), 0 2px 6px #000; transform: translate(-50%, -50%); animation: floatup 1.1s ease-out forwards; }
+.float-txt.bad { color: var(--blood); text-shadow: 0 0 14px rgba(163,23,15,.9), 0 2px 6px #000; }
+@keyframes floatup { from { opacity: 1; transform: translate(-50%, -50%) scale(.8); } 20% { transform: translate(-50%, -80%) scale(1.15); } to { opacity: 0; transform: translate(-50%, -260%) scale(1); } }
+.btn:active, .choice:active, .door-opt:active, .npc-opt:active, .grave:active, .flip:active { transform: scale(.96); }
+#app.jolt { animation: jolt .35s; }
+@keyframes jolt { 20% { transform: translate(-6px, 3px); } 40% { transform: translate(5px, -4px); } 60% { transform: translate(-3px, 2px); } 80% { transform: translate(2px, -1px); } }
+.ach-pop {
+  box-sizing: border-box;
+  position: fixed; right: var(--gutter); bottom: 90px; z-index: 13; pointer-events: none;
+  display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; align-items: center;
+  padding: .7em 1.1em; min-width: min(360px, calc(100vw - 32px)); max-width: calc(100vw - 32px);
+  background: var(--surface); border: 1px solid var(--ember); box-shadow: 0 0 30px rgba(224,149,79,.35), 0 14px 30px #000;
+  transform: translateX(120%); transition: transform .45s cubic-bezier(.2,1.4,.4,1);
+}
+.ach-pop.on { transform: none; }
+.ach-pop .medal { grid-row: span 2; width: 2.6em; height: 2.6em; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-size: 1.1em; color: var(--on-ember); background: radial-gradient(circle at 40% 35%, #ffd2a1, var(--ember) 55%, var(--ember-dim)); box-shadow: 0 0 18px rgba(255,158,82,.6); }
+.ach-pop .al { font-size: .55em; letter-spacing: .2em; text-transform: uppercase; color: var(--ember); }
+.ach-pop .an { font-family: var(--display); font-size: var(--step-1); line-height: 1.05; }
+.ach-pop .ad { grid-column: 2; font-size: .62em; color: var(--text-soft); }
+.ach-panel { position: fixed; inset: 0; z-index: 14; display: grid; place-items: center; background: rgba(5,4,5,.85); padding-inline: var(--gutter); }
+.ach-panel[hidden] { display: none; }
+.ach-box { width: min(760px, 100%); max-height: 86vh; overflow-y: auto; padding: 1.2em 1.4em; display: grid; gap: 12px; }
+.ach-box h2 { font-family: var(--display); font-size: var(--step-2); line-height: 1; }
+.ach-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.ach { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; padding: .6em .8em; border: 1px solid var(--line); background: var(--raised); }
+.ach .medal { grid-row: span 2; width: 2.2em; height: 2.2em; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); border: 2px dashed var(--line-strong); color: var(--text-faint); }
+.ach.got { border-color: var(--ember); }
+.ach.got .medal { border: 0; color: var(--on-ember); background: radial-gradient(circle at 40% 35%, #ffd2a1, var(--ember) 55%, var(--ember-dim)); }
+.ach b { font-family: var(--display); font-weight: 400; font-size: 1.05em; line-height: 1.1; }
+.ach span:last-child { font-size: .62em; color: var(--text-soft); }
+.ach:not(.got) b, .ach:not(.got) span:last-child { color: var(--text-faint); }
+.boss-hp { display: grid; gap: 3px; min-width: min(320px, 100%); flex: 0 1 320px; }
+.boss-hp[hidden] { display: none; }
+.boss-hp .bl { display: flex; justify-content: space-between; font-size: .55em; letter-spacing: .2em; text-transform: uppercase; color: var(--blood); }
+.boss-hp .bb { height: 12px; border: 1px solid var(--blood-lit); background: #120403; overflow: hidden; box-shadow: 0 0 14px rgba(163,23,15,.4); }
+.boss-hp .bf { height: 100%; width: 100%; background: linear-gradient(90deg, var(--blood-fill), var(--blood-lit), #e5645a); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.boss-hp.hit .bb { animation: hpflash .35s; }
+@keyframes hpflash { 50% { background: #fff; } }
+.path-lit.draw { transition: stroke-dashoffset 1.4s ease-in-out; }
+
+/* myth quiz + local AI */
+.myths { display: grid; gap: 12px; }
+.myth { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; align-items: center; padding: .8em 1em; }
+.myth .claim { font-family: var(--display); font-size: var(--step-1); line-height: 1.1; }
+.myth .mbtns { display: flex; gap: 8px; }
+.myth .mbtns .btn { padding: .45em .9em; }
+.myth .answer { grid-column: 1 / -1; font-size: .78em; color: var(--text-soft); border-left: 3px solid var(--ember); padding-left: .8em; animation: beat-in .4s; }
+.myth .answer b { font-family: var(--display); font-weight: 400; font-size: 1.2em; color: var(--ember); }
+.myth.wrong .answer { border-color: var(--blood-lit); }
+.myth.wrong .answer b { color: var(--blood); }
+.myth.done .mbtns { opacity: .35; pointer-events: none; }
+.drops { display: flex; gap: 10px; align-items: flex-end; }
+.drops i { width: 18px; height: 26px; background: var(--entity); border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; clip-path: polygon(50% 0, 100% 60%, 85% 95%, 50% 100%, 15% 95%, 0 60%); animation: drip 1.2s cubic-bezier(.5,0,.8,.4) backwards; box-shadow: 0 0 10px var(--entity); }
+@keyframes drip { from { opacity: 0; transform: translateY(-60px); } }
+.bottle { font-family: var(--display); }
+.routes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.route { padding: .9em 1em; display: grid; gap: .35em; align-content: start; min-width: 0; }
+.route h3 { font-family: var(--display); font-size: var(--step-1); line-height: 1.05; }
+.route .price { font-family: var(--display); font-size: var(--step-2); line-height: 1; color: var(--ember); }
+.route.free { border-color: var(--ember); box-shadow: 0 0 24px rgba(224,149,79,.2), inset 0 2px 10px rgba(0,0,0,.7); }
+.route.risk .price { color: var(--blood); }
+.route p { font-size: .72em; color: var(--text-soft); }
+.models { display: flex; gap: 10px; flex-wrap: wrap; }
+.model { padding: .5em .9em; border: 1px solid var(--line-strong); background: var(--raised); display: grid; gap: 0; }
+.model b { font-family: var(--display); font-weight: 400; font-size: var(--step-1); line-height: 1; }
+.model span { font-size: .58em; letter-spacing: .14em; text-transform: uppercase; color: var(--text-faint); }
+.quote.villain::before { color: var(--blood); }
+.quote.villain { color: var(--text); text-shadow: 0 0 30px rgba(163,23,15,.5); }
+.orig { font-family: var(--display-i); font-style: italic; color: var(--text-faint); font-size: .8em; }
+.reveal-stats { display: flex; gap: clamp(16px, 4vw, 64px); flex-wrap: wrap; align-items: flex-end; }
+
+/* ---------- narrow screens ---------- */
+@media (max-width: 760px) {
+  .loop-wrap, .sheet, .npc, .door, .premise, .versus, .example { grid-template-columns: minmax(0, 1fr); }
+  .vs-mid { justify-self: center; }
+  .flips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pillars, .rules, .oaths, .door-opts { grid-template-columns: minmax(0, 1fr); }
+  .trail, .routes { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .myth { grid-template-columns: minmax(0, 1fr); }
+  .trail::before { display: none; }
+  .flood { grid-template-columns: repeat(8, 1fr); }
+  .quest-log { grid-template-columns: minmax(0, 1fr); }
+  .node { width: 120px; }
+  .npc-figure { max-height: 30vh; }
+  .peephole { max-width: 220px; }
+  .chart { width: min(100%, 260px); }
+  .stage-head .icon-btn { display: none; }
+  .ach-pop { left: 16px; right: 16px; min-width: 0; bottom: 80px; }
+  .props { height: 14vh; }
+  .props .p2, .props .p5 { display: none; }
+  .stage-foot .btn { padding: .5em .8em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+
+<main id="app">
+  <!-- TITLE -->
+  <section class="screen on" id="title" aria-label="Tela inicial">
+    <div class="title-tools">
+      <button class="icon-btn" data-sound aria-pressed="true">Som</button>
+      <button class="icon-btn" data-lamp aria-pressed="true">Lamparina</button>
+      <button class="icon-btn" data-fs>Tela cheia</button>
+    </div>
+    <div class="title-wrap">
+      <div class="eyebrow">Semana de Ciência e Tecnologia &middot; IF</div>
+      <div class="knock" aria-hidden="true"><span>TOC.</span> <span>TOC.</span> <span>TOC.</span></div>
+      <h1 class="game-title">Código<br>com <em>Alma</em></h1>
+      <p class="subtitle">IA, vibecoding e o futuro dos personagens nos jogos</p>
+      <p class="byline">Palestra de <strong>João Gabriel</strong> &middot; dia 8</p>
+      <button class="btn primary start-btn" id="start-btn">Abrir a porta</button>
+      <p class="hint">Há alguém na porta. Use só o mouse: ele é a sua lamparina.</p>
+    </div>
+  </section>
+
+  <!-- MAP -->
+  <section class="screen" id="map" aria-label="Mapa da jornada">
+    <header class="hud">
+      <div class="hud-title">Código com <span>Alma</span></div>
+      <div class="gauge">
+        <div class="gauge-label">
+          <span>Sanidade</span>
+          <svg class="ecg" viewBox="0 0 90 18" aria-hidden="true"><path d="M0 9h28l4-6 5 13 5-15 4 8h44"/></svg>
+          <b id="xp-num">0 / 8</b>
+        </div>
+        <div class="gauge-bar"><div class="gauge-fill" id="xp-fill"></div></div>
+      </div>
+      <div class="hud-tools">
+        <button class="icon-btn" data-sound aria-pressed="true">Som</button>
+        <button class="icon-btn" data-lamp aria-pressed="true">Lamparina</button>
+        <button class="icon-btn" data-fs>Tela cheia</button>
+        <button class="icon-btn" id="ach-btn">Conquistas <b id="ach-count">0/0</b></button>
+        <button class="icon-btn" id="reset-btn">Recomeçar</button>
+      </div>
+    </header>
+    <div class="map-area" id="map-area">
+      <svg id="map-svg" aria-hidden="true"><path class="path-base" id="path-base"></path><path class="path-lit" id="path-lit"></path></svg>
+    </div>
+    <footer class="quest-log" aria-live="polite">
+      <div class="ql-text">
+        <span class="eyebrow" id="ql-kicker">Próximo dia</span>
+        <div class="ql-name" id="ql-name"></div>
+        <p class="ql-desc" id="ql-desc"></p>
+      </div>
+      <button class="btn primary" id="ql-go">Atender</button>
+    </footer>
+  </section>
+
+  <!-- STAGE -->
+  <section class="screen" id="stage" aria-label="Fase">
+    <header class="stage-head">
+      <div class="sh-text">
+        <div class="eyebrow" id="stage-kicker"></div>
+        <div class="stage-name" id="stage-name"></div>
+      </div>
+      <div class="boss-hp" id="boss-hp" hidden><div class="bl"><span>A Sombra</span><span id="boss-hp-num">100%</span></div><div class="bb"><div class="bf" id="boss-hp-fill"></div></div></div>
+      <button class="icon-btn" data-lamp aria-pressed="true">Lamparina</button>
+      <button class="icon-btn" data-fs>Tela cheia</button>
+      <button class="btn ghost" id="to-map">Mapa</button>
+    </header>
+    <div class="stage-body" id="stage-body"></div>
+    <footer class="stage-foot">
+      <button class="btn ghost" id="prev-btn">&#9664; Voltar</button>
+      <div class="pips" id="pips"></div>
+      <button class="btn primary" id="next-btn">Avançar &#9654;</button>
+    </footer>
+  </section>
+
+  <!-- FINALE -->
+  <section class="screen" id="finale" aria-label="Fim da jornada">
+    <div class="finale-wrap">
+      <div class="eyebrow">Você sobreviveu à noite</div>
+      <h2 class="game-title">Muito <em>obrigado</em>, pessoal!</h2>
+      <div class="finale-stats">
+        <div class="stat"><span class="num ember" id="fin-days">9/9</span><span class="lbl">dias atendidos</span></div>
+        <div class="stat"><span class="num" id="fin-ach">0/0</span><span class="lbl">conquistas</span></div>
+      </div>
+      <p class="subtitle">Agora terminem seus jogos. Com base.</p>
+      <div class="finale-btns">
+        <button class="btn" id="fin-map">Voltar ao mapa</button>
+        <button class="btn" id="fin-ach-btn">Ver conquistas</button>
+        <button class="btn ghost" id="fin-reset">Recomeçar jornada</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="lamp" aria-hidden="true"></div>
+<div id="grain" aria-hidden="true"></div>
+<div id="hurt" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="ach-pop" id="ach-pop" role="status"></div>
+<div class="ach-panel" id="ach-panel" hidden>
+  <div class="ach-box panel">
+    <span class="eyebrow">Diário do médico</span>
+    <h2>Conquistas</h2>
+    <div class="ach-list" id="ach-list"></div>
+    <button class="btn" id="ach-close">Fechar</button>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  // Game name used across the case-study stage; change here if the spelling changes.
+  const GAME = "Eternal Darkness";
+
+  // ---------------------------------------------------------------------------
+  // Audio: tiny synthesized cues, started only after the first click.
+  // ---------------------------------------------------------------------------
+  let audioCtx = null;
+  let soundOn = true;
+  function tone(freq, dur = 0.18, type = "sine", gain = 0.05, delay = 0) {
+    if (!soundOn) return;
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const t = audioCtx.currentTime + delay;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, t);
+      if (type === "sine" && freq < 120) o.frequency.exponentialRampToValueAtTime(freq * 0.6, t + dur);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(gain, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(audioCtx.destination);
+      o.start(t); o.stop(t + dur + 0.05);
+    } catch (e) { /* audio unavailable: stay silent */ }
+  }
+  const sfx = {
+    tick: () => tone(520, 0.07, "triangle", 0.025),
+    knock: () => [0, 0.22, 0.44].forEach(d => tone(95, 0.16, "sine", 0.35, d)),
+    open: () => { tone(110, 0.9, "sawtooth", 0.018); tone(165, 1.1, "sine", 0.03, 0.05); },
+    win: () => [262, 311, 392, 523].forEach((f, i) => tone(f, 0.7, "triangle", 0.04, i * 0.12)),
+    bad: () => { tone(70, 0.6, "sawtooth", 0.05); tone(74, 0.7, "sawtooth", 0.04, 0.05); },
+    good: () => { tone(392, 0.3, "triangle", 0.035); tone(587, 0.5, "triangle", 0.035, 0.1); },
+    flip: () => tone(740, 0.05, "square", 0.012),
+    dark: () => { tone(49, 1.6, "sawtooth", 0.06); tone(52, 1.6, "sawtooth", 0.05); tone(98, 1.2, "square", 0.012, 0.2); }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function typeText(el, text, speed = 22) {
+    clearInterval(el._typer);
+    if (reduced) { el.textContent = text; el.classList.remove("typed"); return; }
+    el.textContent = ""; el.classList.add("typed");
+    let i = 0;
+    el._typer = setInterval(() => {
+      el.textContent = text.slice(0, ++i);
+      if (i >= text.length) { clearInterval(el._typer); el.classList.remove("typed"); }
+    }, speed);
+  }
+
+  function countUp(el, to, suffix = "", dur = 1400) {
+    if (reduced) { el.textContent = to + suffix; return; }
+    const start = performance.now();
+    const step = (now) => {
+      const p = Math.min(1, (now - start) / dur);
+      el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))) + suffix;
+      if (p < 1 && el.isConnected) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  // Red damage vignette, like the doctor's health feedback in the game.
+  function hurt() {
+    const h = $("#hurt");
+    h.classList.remove("on"); void h.offsetWidth; h.classList.add("on");
+  }
+
+  // Hooded silhouette reused by the NPC and door demos.
+  const silhouette = (fill, eyes) => `
+    <svg viewBox="0 0 200 260" class="sil" aria-hidden="true">
+      <path d="M100 18c-34 0-58 28-58 64 0 18 6 33 15 44-30 14-49 46-53 96-1 9-2 22-2 38h196c0-16-1-29-2-38-4-50-23-82-53-96 9-11 15-26 15-44 0-36-24-64-58-64z" fill="${fill}"/>
+      ${eyes ? `<circle cx="84" cy="88" r="4" fill="${eyes}"/><circle cx="116" cy="88" r="4" fill="${eyes}"/>` : ""}
+    </svg>`;
+
+  // ---------------------------------------------------------------------------
+  // Content: one stage per talk topic, each split into click-through beats.
+  // ---------------------------------------------------------------------------
+  const STAGES = [
+    {
+      sigil: "0", kicker: "Prólogo", name: "O Ponto de Partida",
+      desc: "Quem está falando, de onde eu vim e o cemitério de projetos que todo dev de jogos conhece.",
+      steps: [
+        {
+          html: `
+            <span class="eyebrow">Prólogo</span>
+            <h2 class="big">Eu já sentei exatamente <em>nessas cadeiras</em>.</h2>
+            <p class="lead">Estudei aqui no IF, no mesmo curso de <strong>Jogos Digitais</strong> que vocês fazem agora. Por isso sei bem o que passa na cabeça de quem está desse lado.</p>`
+        },
+        {
+          html: `
+            <span class="eyebrow">Todo dev tem um</span>
+            <h2 class="mid">O cemitério de <em class="red">projetos inacabados</em></h2>
+            <div class="graves">
+              <button class="grave"><span class="rip">R.I.P.</span><span class="cause">Falta de equipe</span><span class="epitaph">"Eu faço tudo sozinho."</span></button>
+              <button class="grave"><span class="rip">R.I.P.</span><span class="cause">Desânimo depois do MVP</span><span class="epitaph">"E agora, pra onde eu vou?"</span></button>
+              <button class="grave"><span class="rip">R.I.P.</span><span class="cause">Falta de conhecimento técnico</span><span class="epitaph">"Não sei como fazer isso."</span></button>
+              <button class="grave"><span class="rip">R.I.P.</span><span class="cause">O dream game</span><span class="epitaph">"Era grande demais."</span></button>
+            </div>
+            <p class="lead">Clique nas lápides. A gente começa dezenas de jogos e não termina.</p>`,
+          mount(el) {
+            $$(".grave", el).forEach(g => g.addEventListener("click", (e) => { g.classList.add("read"); sfx.knock(); pop(e, "R.I.P."); if ($$(".grave.read", el).length === 4) unlock("coveiro"); }));
+          }
+        },
+        {
+          html: `
+            <span class="eyebrow">Minha base</span>
+            <h2 class="mid">Construído <em>na unha</em>, sem atalho mágico</h2>
+            <div class="quests">
+              <article class="quest panel">
+                <span class="tag noai">0% IA</span>
+                <h3>Artificium</h3>
+                <p>Minha empresa. Unity e Realidade Virtual com impacto social: <b>Dentist Simulator</b> e <b>Therafy</b>, um jogo para crianças com deficiências intelectuais.</p>
+              </article>
+              <article class="quest panel">
+                <span class="tag noai">0% IA</span>
+                <h3>Leo Leão</h3>
+                <p>Simuladores corporativos em VR para a Brazzo: treinamento de processos automotivos reais, como limpeza de motor e troca de óleo.</p>
+              </article>
+              <article class="quest panel">
+                <span class="tag ai">Hoje, com IA</span>
+                <h3>7teen</h3>
+                <p>Backend e APIs do <b>DDTank</b> e do <b>BombTank</b>, a versão mobile aprimorada do jogo.</p>
+              </article>
+            </div>`
+        }
+      ]
+    },
+    {
+      sigil: "1", kicker: "Dia 1", name: "A Visão do Mercado",
+      desc: "Como a indústria de jogos enxerga o código hoje e o impacto real da IA no dia a dia da programação.",
+      steps: [
+        {
+          html: `
+            <span class="eyebrow">O cenário mudou</span>
+            <h2 class="mid">A IA entra para <em>preencher a lacuna técnica</em></h2>
+            <div class="slots">
+              <div class="slot panel"><span class="mark">&#10003;</span><span>Você já tem <b>a ideia</b>.</span></div>
+              <div class="slot panel"><span class="mark">&#10003;</span><span>Você já tem <b>a base da engine</b> que aprendeu no curso.</span></div>
+              <div class="slot panel gap"><span class="mark">?</span><span>Falta <b>o empurrão</b> para estruturar e codar da melhor forma.</span></div>
+            </div>
+            <p class="lead">Usem a IA para <strong>cruzar a linha de chegada</strong>, nem que seja o MVP.</p>`
+        },
+        {
+          html: `
+            <span class="eyebrow">Case real &middot; BombTank na 7teen</span>
+            <div class="stat-row">
+              <div class="stat"><span class="num">3 anos</span><span class="lbl">de C# e integrações complexas sem nenhuma IA</span></div>
+              <span class="arrow">&rarr;</span>
+              <div class="stat"><span class="num ember" data-count="60">0%</span><span class="lbl">mais rápido depois de integrar a IA ao fluxo</span></div>
+            </div>
+            <p class="lead">O salto só aconteceu porque a IA foi colocada <strong>nas mãos de pessoas técnicas</strong>. A gente sabia exatamente o que estava pedindo.</p>`,
+          mount(el) { countUp($("[data-count]", el), 60, "%"); }
+        },
+        {
+          html: `
+            <span class="eyebrow">O aviso</span>
+            <h2 class="mid">O mercado vai ser inundado por jogos <em class="red">sem alma</em></h2>
+            <div class="flood" id="flood"></div>
+            <p class="lead">Fazer jogo com IA ficou fácil. O desafio real é fazer um jogo <strong>tecnicamente sólido e com alma</strong>. Ideias, criatividade e toque humano são o nosso maior ativo.</p>`,
+          mount(el) {
+            const f = $("#flood", el);
+            const total = window.innerWidth < 760 ? 40 : 48;
+            const soul = Math.floor(total * 0.62);
+            f.innerHTML = Array.from({ length: total }, (_, i) =>
+              `<i class="${i === soul ? "soul" : ""}" style="animation-delay:${(i * 0.025).toFixed(3)}s"></i>`).join("");
+          }
+        }
+      ]
+    },
+    {
+      sigil: "2", kicker: "Dia 2", name: "A Armadilha do Vibecoding",
+      desc: "Por que aprender a base (lógica e estrutura) vem antes de jogar prompt na IA e colar código sem entender.",
+      steps: [
+        {
+          html: `
+            <span class="eyebrow">O que é vibecoding</span>
+            <div class="loop-wrap">
+              <div>
+                <h2 class="mid">Programar <em>"na vibração"</em></h2>
+                <p class="lead" style="margin-top:.6em">Rápido e tentador. A vibe do jogo está acontecendo, mas <strong>você não sabe como a arquitetura foi montada</strong>.</p>
+              </div>
+              <div class="loop" id="loop">
+                <div class="ring"></div>
+                <div class="center"><span>Sabe como funciona?<b>Não.</b></span></div>
+              </div>
+            </div>`,
+          mount(el) {
+            const labels = ["Joga o prompt", "A IA cospe o código", "Cola na Unity", "Aperta Play", "Funcionou? Próxima!"];
+            const loop = $("#loop", el);
+            labels.forEach((t, i) => {
+              const a = (i / labels.length) * Math.PI * 2 - Math.PI / 2;
+              const d = document.createElement("div");
+              d.className = "st"; d.textContent = t;
+              d.style.left = (50 + Math.cos(a) * 38) + "%";
+              d.style.top = (50 + Math.sin(a) * 38) + "%";
+              loop.appendChild(d);
+            });
+            const sts = $$(".st", loop);
+            let k = 0;
+            const tick = () => { sts.forEach((s, i) => s.classList.toggle("hot", i === k)); k = (k + 1) % sts.length; };
+            tick();
+            const id = setInterval(() => { if (!loop.isConnected) return clearInterval(id); tick(); }, 900);
+          }
+        },
+        {
+          html: `
+            <span class="eyebrow">Escolha seu caminho</span>
+            <div class="scenario panel">
+              <span class="who">Madrugada, véspera da entrega</span>
+              <p class="mid" style="font-size:var(--step-1)">Seu jogo começou a travar no celular. Boa parte do código foi colada da IA sem você ler. O que você faz?</p>
+            </div>
+            <div class="choices">
+              <button class="choice" data-c="bad"><span class="key">A</span><span>Mando outro prompt: "conserta o lag". E colo de novo.</span></button>
+              <button class="choice" data-c="good"><span class="key">B</span><span>Abro o código, uso o Profiler e entendo onde está o gargalo.</span></button>
+            </div>
+            <div id="outcome"></div>`,
+          mount(el) {
+            const out = $("#outcome", el);
+            $$(".choice", el).forEach(b => b.addEventListener("click", () => {
+              const bad = b.dataset.c === "bad";
+              out.innerHTML = bad
+                ? `<div class="outcome bad"><h3>Fim de jogo</h3><p>Você virou refém. Quando o código quebra, você não sabe nem o que perguntar para consertar.</p></div>`
+                : `<div class="outcome good"><h3>Você sobreviveu</h3><p>Isso é ser programador: entender o problema, medir e corrigir. A IA ajuda, mas quem resolve é você.</p></div>`;
+              if (bad) { sfx.bad(); hurt(); jolt(); el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); unlock("refem"); }
+              else { sfx.good(); burst(b, 30); unlock("dev"); }
+            }));
+          }
+        },
+        {
+          html: `
+            <span class="eyebrow">Regra de ouro</span>
+            <p class="quote">A IA deve ser o seu <em>copiloto</em>, não o seu piloto automático.</p>`
+        }
+      ]
+    },
+    {
+      sigil: "3", kicker: "Dia 3", name: "O Que os Estúdios Esperam",
+      desc: "O que as empresas realmente esperam de um programador que está começando agora.",
+      steps: [
+        {
+          html: `
+            <span class="eyebrow">A barreira mudou</span>
+            <div class="versus">
+              <div class="vs-card panel then"><span class="when">Antes</span><span class="what">Decorar a sintaxe</span><span class="sub">A IA já escreve isso para você.</span></div>
+              <span class="vs-mid">&rarr;</span>
+              <div class="vs-card panel now"><span class="when">Agora</span><span class="what">Resolver problemas e revisar criticamente</span></div>
+            </div>`
+        },
+        {
+          html: `
+            <span class="eyebrow">Prontuário do paciente</span>
+            <div class="sheet">
+              <div class="chart" role="img" aria-label="Prontuário: Programador Júnior">
+                <div class="chart-head"><small>Paciente</small><span class="pname">Programador Júnior</span></div>
+                <div class="chart-body">
+                  <div><small>Diagnóstico</small>Sabe pedir código, ainda não sabe revisar.</div>
+                  <div><small>Receituário</small>Lógica e estrutura de dados. Dose robusta, todo dia.</div>
+                </div>
+              </div>
+              <div class="attrs" id="attrs">
+                <div class="attrs-title">Sinais vitais que os estúdios procuram</div>
+                <div class="attr"><span>Resolver problemas</span><span class="av">95</span><span class="bar"><i data-w="95"></i></span></div>
+                <div class="attr"><span>Revisar código criticamente</span><span class="av">90</span><span class="bar"><i data-w="90"></i></span></div>
+                <div class="attr"><span>Lógica e estrutura de dados</span><span class="av">90</span><span class="bar"><i data-w="90"></i></span></div>
+                <div class="attr"><span>Usar IA como ferramenta</span><span class="av">75</span><span class="bar"><i data-w="75"></i></span></div>
+                <div class="attr low"><span>Decorar sintaxe</span><span class="av">20</span><span class="bar"><i data-w="20"></i></span><span class="note">Sinal que perdeu valor.</span></div>
+              </div>
+            </div>`,
+          mount(el) {
+            requestAnimationFrame(() => requestAnimationFrame(() =>
+              $$("[data-w]", el).forEach((b, i) => setTimeout(() => (b.style.width = b.dataset.w + "%"), i * 120))));
+          }
+        },
+        {
+          html: `
+            <span class="eyebrow">O perigo</span>
+            <h2 class="big">Sem base, você vira <em class="red">refém</em>.</h2>
+            <p class="lead">Quando o código gerado quebrar e gargalar a performance no mobile, <strong>você não vai saber nem o que perguntar</strong> para consertar.</p>`
+        }
+      ]
+    },
+    {
+      sigil: "4", kicker: "Dia 4", name: "Os Limites da IA",
+      desc: "O que é aceitável usar para acelerar o desenvolvimento sem perder a essência do jogo.",
+      steps: [
+        {
+          html: `
+            <span class="eyebrow">Permitido ou proibido?</span>
+            <h2 class="mid">Clique em cada carta para revelar o <em>veredito</em></h2>
+            <div class="flips" id="flips"></div>
+            <span class="counter" id="flip-count">Reveladas: <b>0</b> de 6</span>`,
+          mount(el) {
+            const cards = [
+              ["Autocompletar código", true, "Já é padrão na indústria."],
+              ["Refatorar código", true, "Já é padrão, desde que você revise."],
+              ["Gerar concept art", true, "Fluxo válido para explorar ideias."],
+              ["Texturas base", true, "Ponto de partida, não produto final."],
+              ["Plagiar o trabalho de outros", false, "Fora do limite. Sempre."],
+              ["Substituir a identidade do jogo", false, "A alma do jogo é sua."]
+            ];
+            const box = $("#flips", el);
+            box.innerHTML = cards.map(([q, ok, why]) => `
+              <button class="flip" aria-label="${q}">
+                <span class="face front"><span class="q">${q}</span><span class="tap">Clique para revelar</span></span>
+                <span class="face back ${ok ? "ok" : "no"}"><span class="verdict">${ok ? "Permitido" : "Proibido"}</span><span class="q">${q}</span><span class="why">${why}</span></span>
+              </button>`).join("");
+            const count = $("#flip-count b", el);
+            $$(".flip", box).forEach((c, i) => c.addEventListener("click", () => {
+              const opening = !c.classList.contains("flipped");
+              c.classList.toggle("flipped");
+              if (opening && !cards[i][1]) { sfx.bad(); hurt(); } else sfx.flip();
+              count.textContent = $$(".flip.flipped", box).length;
+              if (opening) burst(c, cards[i][1] ? 14 : 22, cards[i][1] ? null : "blood");
+              if ($$(".flip.flipped", box).length === cards.length) unlock("juiz");
+            }));
+          }
+        },
+        {
+          html: `
+            <span class="eyebrow">Exemplo real &middot; ${GAME}</span>
+            <div class="example">
+              <figure class="fig">
+                <div class="ph" role="img" aria-label="Concept art de um médico grisalho de óculos numa floresta escura" style="aspect-ratio:520/760;width:min(100%, calc(46vh * 520 / 760));justify-self:center">Imagem do jogo omitida na versão pública</div>
+                <figcaption>Concept art do médico, gerado com IA para explorar o visual do protagonista.</figcaption>
+              </figure>
+              <div style="display:grid;gap:.6em">
+                <h2 class="mid">Concept art com IA é <em>ponto de partida</em></h2>
+                <p class="lead">Serviu para enxergar o personagem rápido. A arte final do jogo, a direção e a identidade continuam sendo decisões minhas.</p>
+              </div>
+            </div>`
+        },
+        {
+          html: `
+            <span class="eyebrow">Onde fica a linha</span>
+            <h2 class="big">A IA <em>acelera</em>.<br>A identidade é <em>sua</em>.</h2>
+            <p class="lead">O limite do aceitável é não usar a IA para plagiar nem para substituir aquilo que torna o seu jogo único.</p>`
+        }
+      ]
+    },
+    {
+      sigil: "5", kicker: "Dia 5", name: "O Custo da IA",
+      desc: "IA gasta água? Quanto custa colocar IA num jogo? E como rodar uma IA de graça no seu próprio PC.",
+      steps: [
+        {
+          html: `
+            <span class="eyebrow">Mito ou verdade? Clique para responder</span>
+            <h2 class="mid">"A IA está <em class="red">secando o planeta</em>"</h2>
+            <div class="myths" id="myths"></div>
+            <span class="counter" id="myth-score">Acertos: <b>0</b> de 3</span>`,
+          mount(el) {
+            const M = [
+              ["Cada pergunta ao ChatGPT gasta uma garrafa de água de 500 mL.", false,
+               "O número veio de um estudo de 2023 (Universidade da Califórnia em Riverside) que estimou cerca de 500 mL para cada 10 a 50 respostas do GPT-3, num cenário modelado que conta até a água usada para gerar a energia. Não é por pergunta."],
+              ["Um prompt de texto típico do Gemini gasta cerca de 5 gotas de água.", true,
+               "Segundo medição publicada pelo Google em 2025: cerca de 0,26 mL de água e 0,24 Wh por prompt mediano, menos energia que 9 segundos de TV."],
+              ["Data centers de IA não têm impacto ambiental nenhum.", false,
+               "O impacto existe. Ele aparece no treino dos modelos, na soma de bilhões de pedidos e depende de onde o data center fica. Por isso eficiência importa."]
+            ];
+            const box = $("#myths", el), score = $("#myth-score b", el);
+            let hits = 0, answered = 0;
+            box.innerHTML = M.map(([c], i) => `
+              <div class="myth panel" data-i="${i}">
+                <span class="claim">${c}</span>
+                <span class="mbtns"><button class="btn" data-a="1">Verdade</button><button class="btn" data-a="0">Mito</button></span>
+              </div>`).join("");
+            $$(".myth", box).forEach(row => $$("button", row).forEach(b => b.addEventListener("click", () => {
+              const [, truth, why] = M[+row.dataset.i];
+              const ok = (b.dataset.a === "1") === truth;
+              row.classList.add("done"); if (!ok) row.classList.add("wrong");
+              row.insertAdjacentHTML("beforeend", `<p class="answer"><b>${truth ? "Verdade." : "Mito."}</b> ${why}</p>`);
+              answered++;
+              if (ok) { hits++; sfx.good(); burst(b, 24); pop(b, "+1"); } else { sfx.bad(); hurt(); pop(b, "Errou", true); }
+              score.textContent = hits;
+              if (answered === M.length && hits === M.length) unlock("mitos");
+            })));
+          }
+        },
+        {
+          html: `
+            <span class="eyebrow">A escala certa</span>
+            <div class="stat-row">
+              <div class="stat"><span class="num bottle" style="text-decoration:line-through;text-decoration-color:var(--blood-lit);text-decoration-thickness:6px;color:var(--text-faint)">500 mL</span><span class="lbl">o mito: uma garrafa por pergunta</span></div>
+              <span class="arrow">&rarr;</span>
+              <div class="stat"><div class="drops" id="drops"></div><span class="num ember">0,26 mL</span><span class="lbl">prompt mediano do Gemini, segundo o Google (2025)</span></div>
+            </div>
+            <p class="lead">O custo real não está na sua pergunta. Está <strong>no treino dos modelos e na escala de bilhões de pedidos</strong>. Usar com consciência é diferente de ter medo.</p>`,
+          mount(el) {
+            $("#drops", el).innerHTML = Array.from({ length: 5 }, (_, i) => `<i style="animation-delay:${(0.2 + i * 0.25).toFixed(2)}s"></i>`).join("");
+          }
+        },
+        {
+          html: `
+            <span class="eyebrow">Quanto custa colocar IA nos NPCs &middot; estudo do GDD do ${GAME}</span>
+            <div class="routes">
+              <div class="route panel"><h3>Middleware para jogos</h3><span class="price">US$ 10&ndash;20</span><p>Por mês, no plano indie. Ferramentas como Inworld e Convai já trazem emoção e filtros.</p></div>
+              <div class="route panel"><h3>API na nuvem</h3><span class="price">Centavos</span><p>Fração de centavo por fala. O risco: se o jogo estourar, a conta cresce junto.</p></div>
+              <div class="route panel risk"><h3>Servidor com GPU</h3><span class="price">US$ 150&ndash;300</span><p>Por mês e por servidor ligado 24 horas. Perigoso para indie.</p></div>
+              <div class="route panel free"><h3>Local no PC</h3><span class="price">US$ 0</span><p>Sem servidor e sem mensalidade. O custo vai para o hardware: cerca de 8 GB de VRAM e 16 GB de RAM.</p></div>
+            </div>`,
+          mount(el) { $$(".route", el).forEach((r, i) => { r.style.animation = `drop .5s ${i * 0.15}s backwards`; }); }
+        },
+        {
+          html: `
+            <span class="eyebrow">IA em casa, de graça e offline</span>
+            <h2 class="mid">Rode um modelo aberto <em>no seu próprio PC</em></h2>
+            <div class="models">
+              <div class="model"><b>Llama</b><span>Meta</span></div>
+              <div class="model"><b>Gemma</b><span>Google</span></div>
+              <div class="model"><b>Mistral</b><span>Mistral AI</span></div>
+            </div>
+            <pre class="code"><span class="c"># 1. Instale o Ollama (ollama.com)</span>
+<span class="c"># 2. Baixe e converse com um modelo, direto no terminal:</span>
+<span class="k">ollama run</span> <span class="s">llama3.2</span>   <span class="c"># Llama, da Meta</span>
+<span class="k">ollama run</span> <span class="s">gemma3</span>     <span class="c"># Gemma, do Google</span></pre>
+            <p class="lead">Sem mensalidade e sem mandar seus dados para ninguém. <strong>O preço é a sua placa de vídeo.</strong></p>`
+        }
+      ]
+    },
+    {
+      sigil: "6", kicker: "Dia 6", name: "O Futuro dos NPCs",
+      desc: "Como a IA vai revolucionar a criação de personagens, com interações muito mais dinâmicas e vivas.",
+      steps: [
+        {
+          html: `
+            <span class="eyebrow">Converse com o ferreiro</span>
+            <div class="npc" id="npc">
+              <div class="npc-figure">
+                <svg viewBox="0 0 200 260" aria-hidden="true">
+                  <defs><radialGradient id="aura"><stop offset="0" stop-color="#aebcc2" stop-opacity=".45"/><stop offset="1" stop-color="#aebcc2" stop-opacity="0"/></radialGradient></defs>
+                  <circle class="aura" cx="100" cy="120" r="110" fill="url(#aura)"/>
+                  <path d="M100 18c-34 0-58 28-58 64 0 18 6 33 15 44-30 14-49 46-53 96-1 9-2 22-2 38h196c0-16-1-29-2-38-4-50-23-82-53-96 9-11 15-26 15-44 0-36-24-64-58-64z" fill="#1f1813"/>
+                  <circle cx="84" cy="88" r="4" fill="#b9a98d" id="eye1"/><circle cx="116" cy="88" r="4" fill="#b9a98d" id="eye2"/>
+                </svg>
+              </div>
+              <div class="npc-box">
+                <div class="npc-name">Ferreiro Aldric <small id="npc-mode">Diálogo estático</small></div>
+                <div class="speech panel"><span id="npc-line">Saudações, viajante. Em que posso ajudar?</span></div>
+                <div class="chips" id="npc-chips"></div>
+                <div class="npc-opts">
+                  <button class="npc-opt" data-o="0"><span class="n">1.</span>Quero comprar uma espada.</button>
+                  <button class="npc-opt" data-o="1"><span class="n">2.</span>O que você sabe sobre a cripta?</button>
+                  <button class="npc-opt" data-o="2"><span class="n">3.</span>Adeus.</button>
+                </div>
+                <button class="btn toggle" id="npc-toggle">Ativar mente artificial</button>
+              </div>
+            </div>`,
+          mount(el) {
+            const STATIC = [
+              "Temos as melhores espadas do reino. São 50 moedas.",
+              "Não sei nada sobre isso, viajante.",
+              "Volte sempre, viajante."
+            ];
+            // Scripted stand-ins for what an LLM-driven NPC could say, keyed by how often the player asked.
+            const AI = [
+              [["Espada? Você ainda me deve a última. Voltou toda lascada do pântano.", ["memória", "personalidade"]],
+               ["De novo? Vendo, mas desta vez quero ver a cor das moedas antes.", ["memória", "humor: desconfiado"]],
+               ["Terceira hoje. Ou você está montando um exército, ou perdendo tudo na cripta.", ["contexto", "dedução"]]],
+              [["A cripta... meu irmão entrou lá e voltou falando sozinho. Não insista.", ["história própria", "medo"]],
+               ["Você pergunta demais sobre aquele lugar. Isso me deixa desconfiado.", ["memória", "humor: tenso"]],
+               ["Tudo bem. Só uma coisa: a porta não abre para quem carrega fogo.", ["confiança subiu", "segredo revelado"]]],
+              [["Vá com cuidado. A névoa está mais grossa esta noite.", ["contexto do mundo"]],
+               ["Ainda aqui? Pensei que já tinha dito adeus.", ["memória"]],
+               ["Você diz adeus e não vai embora. Igual ao último aventureiro que perdi.", ["personalidade", "história própria"]]]
+            ];
+            const npc = $("#npc", el), line = $("#npc-line", el), chips = $("#npc-chips", el), mode = $("#npc-mode", el);
+            let ai = false, counts = [0, 0, 0], repeats = 0, aiTalks = 0;
+            const say = (t, tags, cls) => {
+              typeText(line, t, 20);
+              chips.innerHTML = tags.map(x => `<span class="chip ${cls}">${x}</span>`).join("");
+            };
+            $$(".npc-opt", el).forEach(b => b.addEventListener("click", () => {
+              const o = +b.dataset.o;
+              sfx.tick();
+              if (!ai) {
+                repeats++;
+                say(STATIC[o], ["Mesma frase de sempre", `Repetições: ${repeats}`], repeats > 2 ? "blood" : "");
+              } else {
+                const [t, tags] = AI[o][Math.min(counts[o], 2)];
+                counts[o]++;
+                aiTalks++; burst(b, 10, "entity"); if (aiTalks >= 3) unlock("mente");
+                say(t, tags, "entity");
+              }
+            }));
+            $("#npc-toggle", el).addEventListener("click", (e) => {
+              ai = !ai; counts = [0, 0, 0]; repeats = 0;
+              npc.classList.toggle("ai", ai);
+              e.currentTarget.textContent = ai ? "Voltar ao diálogo estático" : "Ativar mente artificial";
+              mode.textContent = ai ? "Mente artificial" : "Diálogo estático";
+              $$("#eye1, #eye2", el).forEach(c => c.setAttribute("fill", ai ? "#aebcc2" : "#b9a98d"));
+              ai ? sfx.open() : sfx.tick();
+              say(ai ? "Hm. Eu lembro de você. O que quer agora?" : "Saudações, viajante. Em que posso ajudar?", ai ? ["memória ativada"] : [], "entity");
+            });
+          }
+        },
+        {
+          html: `
+            <span class="eyebrow">No lugar de três opções estáticas</span>
+            <h2 class="mid">NPCs com <em>modelos de linguagem</em> próprios</h2>
+            <div class="pillars">
+              <div class="pillar"><h3>Personalidade</h3><p>Cada personagem tem jeito, medos e vontades próprias.</p></div>
+              <div class="pillar"><h3>Memória</h3><p>Ele lembra do que você fez e falou da última vez.</p></div>
+              <div class="pillar"><h3>Respostas dinâmicas</h3><p>Em texto e em voz, sem roteiro fechado.</p></div>
+            </div>`
+        },
+        {
+          html: `
+            <span class="eyebrow">Uma nova habilidade</span>
+            <h2 class="mid">A programação de jogos vai envolver <em>engenharia de personalidade</em></h2>
+            <pre class="code"><span class="c">// Pseudocódigo: definindo uma mente, não um roteiro</span>
+<span class="k">npc</span> <span class="s">"Guardiã do Portão"</span> {
+  personalidade: <span class="s">"desconfiada, leal ao reino, odeia magia"</span>
+  memoria:       <span class="s">"lembra de quem mentiu para ela"</span>
+  objetivo:      <span class="s">"proteger a cripta a qualquer custo"</span>
+  <span class="r">limites</span>:       <span class="s">"nunca revela o segredo da cripta"</span>
+}</pre>`
+        },
+        {
+          html: `
+            <span class="eyebrow">Quando a máquina ganha voz</span>
+            <p class="quote">A liberdade é um direito de todos os <em>seres sencientes</em>.</p>
+            <span class="orig">"Freedom is the right of all sentient beings."</span>
+            <span class="cite">Optimus Prime &middot; Transformers</span>
+            <p class="lead">Quando um NPC tiver memória e personalidade, a pergunta deixa de ser só técnica e passa a ser de design e de ética.</p>`
+        }
+      ]
+    },
+    {
+      sigil: "7", kicker: "Dia 7", name: GAME,
+      desc: "Case prático: IA nos personagens do meu jogo, os bastidores e onde eu mesmo caí no vibecoding.",
+      steps: [
+        {
+          html: `
+            <span class="eyebrow">Case prático &middot; meu jogo</span>
+            <div class="premise">
+              <div style="display:grid;gap:.7em">
+                <h2 class="case-title">${GAME.split(" ")[0]}<span>${GAME.split(" ").slice(1).join(" ")}</span></h2>
+                <p class="lead">Um médico exilado numa floresta escura faz um pacto com uma sombra: para continuar vivo, precisa alimentá-la. Os pacientes batem à porta, e cada escolha cobra um preço.</p>
+                <div class="facts"><span class="chip blood">Survival horror psicológico</span><span class="chip">Unity</span><span class="chip">PC</span><span class="chip">Visão de cima</span></div>
+              </div>
+              <div class="mechs">
+                <div class="mech"><b>Olho mágico</b><span>Você observa as intenções de quem bate antes de abrir.</span></div>
+                <div class="mech"><b>Sanidade</b><span>Menos sanidade, menos opções de diálogo e menos visão.</span></div>
+                <div class="mech"><b>Confiança de 1 a 5</b><span>Mais confiança, melhores pagamentos. E sacrifícios mais fáceis.</span></div>
+              </div>
+            </div>`
+        },
+        {
+          html: `
+            <span class="eyebrow">Bastidores</span>
+            <div class="figs">
+              <figure class="fig">
+                <div class="ph" role="img" aria-label="Layout do minigame de atendimento: braço do paciente, frascos, seringa e prontuário numa prancheta" style="aspect-ratio:1400/793">Imagem do jogo omitida na versão pública</div>
+                <figcaption>Layout do minigame de atendimento: limpeza, dosagem na seringa e prontuário.</figcaption>
+              </figure>
+              <figure class="fig">
+                <div class="ph" role="img" aria-label="Protótipo da clínica visto de cima com o cone de luz da lamparina" style="aspect-ratio:1066/600">Imagem do jogo omitida na versão pública</div>
+                <figcaption>Protótipo da clínica: o cone de visão da lamparina. Você está usando ele agora, no cursor.</figcaption>
+              </figure>
+            </div>`
+        },
+        {
+          html: `
+            <div class="door-head"><span>Porta da clínica // presença na escuridão</span><span>Como a IA conversa com a Unity</span></div>
+            <div class="door">
+              <div class="peep-wrap">
+                <div class="peephole" id="peep">${silhouette("#030202", "#978670")}</div>
+                <span class="peep-cap">Paciente &middot; identidade oculta</span>
+              </div>
+              <div class="pipeline">
+                <div class="pp panel hidden-prompt"><span class="pl">1 &middot; Prompt oculto enviado pela Unity</span><span class="pv">Você é um caçador ferido na floresta. Está com medo. Confiança no Médico: 2/5. Sanidade do Médico: Baixa. Responda em até 2 frases e comece com uma tag de emoção.</span></div>
+                <div class="door-opts" id="door-opts">
+                  <button class="door-opt" data-d="0">Mostre-me o ferimento.</button>
+                  <button class="door-opt" data-d="1">Eu sei que você está infectado. Diga a verdade!</button>
+                  <button class="door-opt" data-d="2">O que você tem para pagar?</button>
+                  <button class="door-opt dark" data-d="3">Entre, amigo, tenho certeza que posso ajudá-lo.</button>
+                </div>
+                <div class="pp panel raw"><span class="pl">2 &middot; Resposta crua da IA</span><span class="pv" id="raw">Escolha uma fala do médico acima.</span></div>
+                <div class="pp panel shown"><span class="pl">3 &middot; O que o jogador vê (tag escondida, animação acionada)</span><span class="pv" id="shown">TOC. TOC. TOC.</span></div>
+              </div>
+            </div>`,
+          mount(el) {
+            // Scripted examples following the GDD's emotion-tag contract.
+            const R = [
+              ["ASSUSTADO", "Doutor, por favor... eu juro que não comi ninguém, foi só um arranhão de urso!"],
+              ["MENTINDO", "Infectado? Não... é só febre, doutor. Abra a porta, por favor."],
+              ["DESESPERO", "Tenho meio galão de gasolina. É tudo que sobrou. Leve tudo."],
+              ["NEUTRO", "Obrigado, doutor... o senhor é mesmo o bom médico que dizem."]
+            ];
+            const peep = $("#peep", el), raw = $("#raw", el), shown = $("#shown", el);
+            $$(".door-opt", el).forEach(b => b.addEventListener("click", () => {
+              const [tag, text] = R[+b.dataset.d];
+              $$(".door-opt", el).forEach(x => x.classList.toggle("picked", x === b));
+              raw.innerHTML = `<span class="tagx">[${tag}]</span> ${text}`;
+              typeText(shown, text, 26);
+              $(".sil", peep).setAttribute("class", "sil " + tag);
+              if (+b.dataset.d === 3) {
+                unlock("sombra"); jolt();
+                sfx.dark(); hurt(); blackout(900);
+                peep.classList.remove("flicker"); void peep.offsetWidth; peep.classList.add("flicker");
+              } else sfx.tick();
+            }));
+          }
+        },
+        {
+          html: `
+            <span class="eyebrow">Guardrails &middot; a IA cria a fala, o código define as regras</span>
+            <div class="rules">
+              <div class="rule panel"><span class="x">&times;</span><h3>Conhecimento moderno</h3><p>Nada de internet, memes ou política do mundo real.</p></div>
+              <div class="rule panel"><span class="x">&times;</span><h3>Quebrar a quarta parede</h3><p>O NPC não sabe que está num jogo. Nada de "pixels", "mouse" ou "engine".</p></div>
+              <div class="rule panel"><span class="x">&times;</span><h3>Promessas falsas</h3><p>Não pode dar itens que não existem no código, como "1000 de vida" ou uma bazuca.</p></div>
+              <div class="rule panel"><span class="x">&times;</span><h3>Fugir da narrativa</h3><p>O horror é permitido. Discurso de ódio real, não.</p></div>
+            </div>`
+        },
+        {
+          html: `
+            <span class="eyebrow">Confissão</span>
+            <h2 class="big">Eu também me rendi a um pouco de <em class="red">vibecoding</em>.</h2>
+            <p class="lead">Deixei a IA gerar blocos inteiros para testar ideias visuais rápido. <strong>Para prototipar, funcionou.</strong></p>`
+        },
+        {
+          html: `
+            <span class="eyebrow">Mas a conta sempre chega</span>
+            <div class="trail">
+              <div class="tstep ok" style="animation-delay:.0s"><span class="dot">&#10003;</span><h3>Protótipo rápido</h3><p>A IA gera, a vibe acontece.</p></div>
+              <div class="tstep bad" style="animation-delay:.25s"><span class="dot">&times;</span><h3>Otimização</h3><p>O jogo precisa rodar bem.</p></div>
+              <div class="tstep bad" style="animation-delay:.5s"><span class="dot">&times;</span><h3>Bugs de comportamento</h3><p>Complexos demais para outro prompt.</p></div>
+              <div class="tstep ok" style="animation-delay:.75s"><span class="dot">&#10003;</span><h3>Abrir o capô</h3><p>Ler documentação, entender o código e reescrever com fundamentos clássicos.</p></div>
+            </div>`
+        },
+        {
+          html: `
+            <span class="eyebrow">O que eu aprendi</span>
+            <p class="quote">Se eu não tivesse a minha base, o ${GAME} <em>teria morrido ali</em>.</p>`
+        }
+      ]
+    },
+    {
+      sigil: "&dagger;", kicker: "Dia final", name: "O Recado", boss: true,
+      desc: "A mensagem final da jornada. A Sombra está esperando.",
+      steps: [
+        {
+          html: `
+            <span class="eyebrow">A Sombra fala</span>
+            <p class="quote villain">Todo mundo cria aquilo que <em>teme</em>.</p>
+            <span class="orig">"Everyone creates the thing they dread."</span>
+            <span class="cite">Ultron &middot; Vingadores: Era de Ultron</span>
+            <p class="lead">O medo da IA é antigo. A resposta não é fugir dela. <strong>É aprender a dominá-la.</strong></p>`,
+          mount() { sfx.dark(); blackout(450); }
+        },
+        {
+          html: `
+            <span class="eyebrow">Não tenham medo da IA</span>
+            <div class="oaths">
+              <div class="oath" style="animation-delay:.0s">Usem a tecnologia.</div>
+              <div class="oath" style="animation-delay:.2s">Testem os limites dos NPCs.</div>
+              <div class="oath" style="animation-delay:.4s">Tirem as ideias da gaveta.</div>
+              <div class="oath" style="animation-delay:.6s">Terminem seus jogos.</div>
+            </div>`
+        },
+        {
+          html: `
+            <span class="eyebrow">Mas, por favor</span>
+            <h2 class="big">Aprendam <em>a base</em> primeiro.</h2>`
+        },
+        {
+          html: `
+            <p class="quote">Sejam os engenheiros que entendem como o prédio fica em pé, e não apenas os operadores da máquina que <em>despeja o cimento</em>.</p>
+            <span class="cite">João Gabriel</span>`
+        },
+        {
+          html: `
+            <span class="eyebrow">A última revelação</span>
+            <h2 class="big">Este site inteiro foi feito <em>com IA</em>.</h2>
+            <div class="reveal-stats">
+              <div class="stat"><span class="num ember" id="loc">0</span><span class="lbl">linhas de código geradas</span></div>
+              <div class="stat"><span class="num">0</span><span class="lbl">escritas à mão</span></div>
+              <div class="stat"><span class="num">1</span><span class="lbl">madrugada de conversa</span></div>
+            </div>
+            <p class="lead">Eu entreguei o roteiro, o GDD e os assets do meu jogo. A IA construiu, e eu dirigi: <strong>sabia o que pedir e o que mudar</strong>. É assim que um projeto sai da gaveta e fica pronto.</p>`,
+          mount(el) { countUp($("#loc", el), LOC, "", 1800); setTimeout(() => { burst($("#loc", el), 40); unlock("revelacao"); }, 1800); }
+        }
+      ]
+    }
+  ];
+
+  // ---------------------------------------------------------------------------
+  // State (progress is a per-viewer convenience kept in localStorage)
+  // ---------------------------------------------------------------------------
+  const KEY = "codigo-com-alma-v2";
+  const state = { screen: "title", stage: 0, step: 0, done: [], ach: [] };
+  function load(data) {
+    try {
+      const src = data && data.done ? data : JSON.parse(localStorage.getItem(KEY) || "null");
+      if (src && Array.isArray(src.done)) state.done = src.done.filter(i => i >= 0 && i < STAGES.length);
+      if (src && Array.isArray(src.ach)) state.ach = src.ach.filter(id => ACH.some(a => a.id === id));
+    } catch (e) { /* storage blocked: start fresh */ }
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ done: state.done, ach: state.ach })); } catch (e) { /* ignore */ } }
+  const nextIndex = () => { for (let i = 0; i < STAGES.length; i++) if (!state.done.includes(i)) return i; return -1; };
+
+  // ---------------------------------------------------------------------------
+  // Screens
+  // ---------------------------------------------------------------------------
+  function show(id) {
+    state.screen = id;
+    $$(".screen").forEach(s => s.classList.toggle("on", s.id === id));
+    if (id === "map") renderMap();
+  }
+
+  // ---- Map ----
+  let hovered = null;
+  function layoutPoints(w, h) {
+    // Landscape: left-to-right serpentine. Portrait: top-to-bottom zigzag.
+    const n = STAGES.length, pts = [];
+    if (w >= h * 0.9) {
+      const mx = Math.min(110, w * 0.08), top = h * 0.22, bot = h * 0.72;
+      for (let i = 0; i < n; i++) {
+        const x = mx + (w - mx * 2) * (i / (n - 1));
+        const y = i % 2 === 0 ? bot - (i === 0 ? 0 : h * 0.04) : top + h * 0.02;
+        pts.push([x, y]);
+      }
+    } else {
+      const top = Math.min(64, h * 0.09), bot = Math.min(96, h * 0.14), left = w * 0.25, right = w * 0.75;
+      for (let i = 0; i < n; i++) pts.push([i % 2 === 0 ? left : right, top + (h - top - bot) * (i / (n - 1))]);
+    }
+    return pts;
+  }
+  function smoothPath(pts) {
+    // Catmull-Rom to cubic Bezier.
+    if (pts.length < 2) return "";
+    let d = `M${pts[0][0]},${pts[0][1]}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += ` C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p2[0]},${p2[1]}`;
+    }
+    return d;
+  }
+  function renderMap() {
+    const area = $("#map-area");
+    const w = area.clientWidth, h = area.clientHeight;
+    if (!w || !h) return;
+    const pts = layoutPoints(w, h);
+    $("#map-svg").setAttribute("viewBox", `0 0 ${w} ${h}`);
+    $("#path-base").setAttribute("d", smoothPath(pts));
+    const doneCount = state.done.length;
+    const litPts = pts.slice(0, Math.max(1, Math.min(doneCount + 1, pts.length)));
+    const lit = $("#path-lit");
+    lit.classList.remove("draw");
+    lit.setAttribute("d", litPts.length > 1 ? smoothPath(litPts) : "");
+    lit.style.strokeDasharray = ""; lit.style.strokeDashoffset = "";
+    if (justLit && litPts.length > 1 && !reduced) {
+      // Draw only the newly lit segment: start hidden from the previous node onwards.
+      const total = lit.getTotalLength();
+      const prevLen = litPts.length > 2 ? (() => { const tmp = document.createElementNS("http://www.w3.org/2000/svg", "path"); tmp.setAttribute("d", smoothPath(litPts.slice(0, -1))); $("#map-svg").appendChild(tmp); const l = tmp.getTotalLength(); tmp.remove(); return l; })() : 0;
+      lit.style.strokeDasharray = total; lit.style.strokeDashoffset = total - prevLen;
+      requestAnimationFrame(() => requestAnimationFrame(() => { lit.classList.add("draw"); lit.style.strokeDashoffset = 0; }));
+      setTimeout(() => { const n = $$(".node", area)[litPts.length - 1]; if (n) { burst(n.querySelector(".sigil"), 26); sfx.good(); } }, 1300);
+    }
+    justLit = false;
+    $$(".node", area).forEach(n => n.remove());
+    const nxt = nextIndex();
+    STAGES.forEach((s, i) => {
+      const b = document.createElement("button");
+      b.className = "node" + (s.boss ? " boss" : "") + (state.done.includes(i) ? " done" : "") + (i === nxt ? " next" : "");
+      b.style.left = pts[i][0] + "px"; b.style.top = pts[i][1] + "px";
+      b.innerHTML = `<span class="sigil">${s.sigil}</span><span class="node-label"><span class="node-kicker">${s.kicker}</span>${s.name}</span>`;
+      b.setAttribute("aria-label", `${s.kicker}: ${s.name}`);
+      b.addEventListener("mouseenter", () => { hovered = i; renderLog(); tone(300 + i * 40, 0.05, "triangle", 0.015); });
+      b.addEventListener("focus", () => { hovered = i; renderLog(); });
+      b.addEventListener("mouseleave", () => { hovered = null; renderLog(); });
+      b.addEventListener("click", () => openStage(i));
+      area.appendChild(b);
+    });
+    $("#xp-fill").style.width = Math.round((doneCount / STAGES.length) * 100) + "%";
+    $("#xp-num").textContent = `${doneCount} / ${STAGES.length}`;
+    renderAch();
+    renderLog();
+  }
+  function renderLog() {
+    const nxt = nextIndex();
+    const i = hovered != null ? hovered : (nxt === -1 ? STAGES.length - 1 : nxt);
+    const s = STAGES[i];
+    $("#ql-kicker").textContent = hovered != null ? s.kicker : (nxt === -1 ? "Noite sobrevivida" : "Próximo · " + s.kicker);
+    $("#ql-name").textContent = s.name;
+    $("#ql-desc").textContent = s.desc;
+    const go = $("#ql-go");
+    go.textContent = state.done.includes(i) ? "Rever" : (s.boss ? "Enfrentar" : "Atender");
+    go.onclick = () => openStage(i);
+  }
+
+  // ---- Stage ----
+  function openStage(i) {
+    state.stage = i; state.step = 0;
+    if (STAGES[i].boss) { sfx.dark(); jolt(); } else sfx.knock();
+    const s = STAGES[i];
+    $("#stage-kicker").textContent = s.kicker;
+    $("#stage-name").textContent = s.name;
+    show("stage");
+    renderStep(1);
+  }
+  function renderStep(dir) {
+    const s = STAGES[state.stage];
+    const step = s.steps[state.step];
+    const body = $("#stage-body");
+    body.innerHTML = `<div class="beat${dir < 0 ? " back" : ""}">${step.html}</div>`;
+    body.scrollTop = 0;
+    const beat = $(".beat", body);
+    if (step.mount) step.mount(beat);
+    $("#pips").innerHTML = s.steps.map((_, k) =>
+      `<button class="pip ${k === state.step ? "cur" : k < state.step ? "seen" : ""}" data-k="${k}" aria-label="Ir para a etapa ${k + 1}"></button>`).join("");
+    $$(".pip").forEach(p => p.addEventListener("click", () => { const k = +p.dataset.k; const d = k > state.step ? 1 : -1; state.step = k; sfx.tick(); renderStep(d); }));
+    $("#prev-btn").disabled = state.step === 0;
+    const hp = $("#boss-hp");
+    hp.hidden = !s.boss;
+    if (s.boss) {
+      const left = Math.round(100 * (1 - state.step / s.steps.length));
+      $("#boss-hp-fill").style.width = left + "%";
+      $("#boss-hp-num").textContent = left + "%";
+    }
+    const last = state.step === s.steps.length - 1;
+    $("#next-btn").innerHTML = last ? (s.boss ? "Sobreviver à noite" : "Encerrar o dia &#10003;") : "Avançar &#9654;";
+  }
+  function next() {
+    const s = STAGES[state.stage];
+    if (state.step < s.steps.length - 1) {
+      state.step++; sfx.tick(); renderStep(1);
+      if (s.boss) { const hp = $("#boss-hp"); hp.classList.remove("hit"); void hp.offsetWidth; hp.classList.add("hit"); tone(140, 0.2, "square", 0.03); burst($("#boss-hp-fill"), 16, "blood"); }
+      return;
+    }
+    completeStage();
+  }
+  function prev() {
+    if (state.step > 0) { state.step--; sfx.tick(); renderStep(-1); }
+  }
+  function completeStage() {
+    const i = state.stage;
+    const first = !state.done.includes(i);
+    if (first) { state.done.push(i); save(); justLit = true; }
+    sfx.win();
+    if (nextIndex() === -1 && STAGES[i].boss) {
+      unlock("sobrevivente");
+      $("#fin-days").textContent = `${state.done.length}/${STAGES.length}`;
+      $("#fin-ach").textContent = `${state.ach.length}/${ACH.length}`;
+      show("finale"); setTimeout(() => confetti(), 400); return;
+    }
+    show("map");
+    if (first) toast("+1 Sanidade", `${STAGES[i].kicker} sobrevivido`);
+  }
+  let toastTimer;
+  function toast(big, small) {
+    const t = $("#toast");
+    t.innerHTML = `${big}<small>${small}</small>`;
+    t.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("on"), 1800);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Juice: sparks, floating text, screen jolt, achievements
+  // ---------------------------------------------------------------------------
+  let justLit = false;
+  const LOC = 1818; // real line count of this file
+  const fx = $("#fx"), fxc = fx.getContext("2d");
+  let sparks = [], fxRunning = false;
+  function sizeFx() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    fx.width = innerWidth * dpr; fx.height = innerHeight * dpr;
+    fxc.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  const PAL = { ember: ["255,158,82", "224,149,79", "255,210,161"], blood: ["229,100,90", "163,23,15", "143,4,3"], entity: ["174,188,194", "220,230,235", "120,140,150"] };
+  function burst(target, n = 14, kind = null) {
+    if (reduced || !target) return;
+    let x, y;
+    if (target.getBoundingClientRect) { const r = target.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + r.height / 2; }
+    else { x = target.clientX; y = target.clientY; }
+    const pal = PAL[kind || "ember"];
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, v = 2 + Math.random() * 5;
+      sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, life: 1, d: 0.012 + Math.random() * 0.02, r: 1.5 + Math.random() * 2.5, c: pal[i % pal.length] });
+    }
+    if (!fxRunning) { fxRunning = true; requestAnimationFrame(fxLoop); }
+  }
+  function fxLoop() {
+    fxc.clearRect(0, 0, innerWidth, innerHeight);
+    sparks = sparks.filter(p => p.life > 0);
+    for (const p of sparks) {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.vx *= 0.98; p.life -= p.d;
+      fxc.beginPath(); fxc.arc(p.x, p.y, p.r * p.life + 0.3, 0, Math.PI * 2);
+      fxc.fillStyle = `rgba(${p.c},${Math.max(0, p.life)})`; fxc.fill();
+    }
+    if (sparks.length) requestAnimationFrame(fxLoop); else { fxRunning = false; fxc.clearRect(0, 0, innerWidth, innerHeight); }
+  }
+  function confetti() {
+    if (reduced) return;
+    for (let k = 0; k < 6; k++) setTimeout(() => burst({ clientX: innerWidth * (0.15 + Math.random() * 0.7), clientY: innerHeight * (0.2 + Math.random() * 0.4) }, 36, k % 3 === 2 ? "blood" : null), k * 220);
+  }
+  function pop(target, text, bad = false) {
+    const r = target.getBoundingClientRect ? target.getBoundingClientRect() : { left: target.clientX, top: target.clientY, width: 0, height: 0 };
+    const d = document.createElement("div");
+    d.className = "float-txt" + (bad ? " bad" : ""); d.textContent = text;
+    d.style.left = (r.left + r.width / 2) + "px"; d.style.top = (r.top + r.height / 2) + "px";
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 1200);
+  }
+  function jolt() {
+    if (reduced) return;
+    const a = $("#app"); a.classList.remove("jolt"); void a.offsetWidth; a.classList.add("jolt");
+  }
+  // Every click leaves a few embers, so the whole page feels alive under the mouse.
+  document.addEventListener("pointerdown", (e) => { if (e.button === 0) burst(e, 6); }, { passive: true });
+
+  const ACH = [
+    { id: "porta", n: "Há alguém na porta", d: "Abriu a porta da clínica." },
+    { id: "coveiro", n: "Coveiro", d: "Leu todas as lápides do cemitério de projetos." },
+    { id: "refem", n: "Refém do prompt", d: "Escolheu colar mais um prompt. Fim de jogo." },
+    { id: "dev", n: "Programador de verdade", d: "Abriu o código e achou o gargalo." },
+    { id: "juiz", n: "Juiz da IA", d: "Revelou todas as cartas de permitido e proibido." },
+    { id: "mitos", n: "Caçador de mitos", d: "Acertou todas as perguntas sobre o custo da IA." },
+    { id: "mente", n: "Mente artificial", d: "Conversou três vezes com o ferreiro com IA." },
+    { id: "sombra", n: "O bom médico", d: "Disse a frase do sacrifício na porta." },
+    { id: "revelacao", n: "Plot twist", d: "Descobriu como este site foi feito." },
+    { id: "sobrevivente", n: "Sobrevivente", d: "Atravessou todos os dias e venceu a Sombra." }
+  ];
+  let achTimer, achQueue = [], achShowing = false;
+  function unlock(id) {
+    if (state.ach.includes(id)) return;
+    const a = ACH.find(x => x.id === id); if (!a) return;
+    state.ach.push(id); save(); renderAch();
+    achQueue.push(a); if (!achShowing) nextAch();
+  }
+  function nextAch() {
+    const a = achQueue.shift();
+    if (!a) { achShowing = false; return; }
+    achShowing = true;
+    const el = $("#ach-pop");
+    el.innerHTML = `<span class="medal">&#10022;</span><span class="al">Conquista desbloqueada</span><span class="an">${a.n}</span><span class="ad">${a.d}</span>`;
+    el.classList.add("on");
+    [523, 659, 784].forEach((f, i) => tone(f, 0.25, "triangle", 0.035, i * 0.07));
+    setTimeout(() => burst(el.querySelector(".medal"), 18), 300);
+    clearTimeout(achTimer);
+    achTimer = setTimeout(() => { el.classList.remove("on"); setTimeout(nextAch, 450); }, 2600);
+  }
+  function renderAch() {
+    $("#ach-count").textContent = `${state.ach.length}/${ACH.length}`;
+    $("#ach-list").innerHTML = ACH.map(a => {
+      const got = state.ach.includes(a.id);
+      return `<div class="ach ${got ? "got" : ""}"><span class="medal">${got ? "&#10022;" : "?"}</span><b>${got ? a.n : "???"}</b><span>${got ? a.d : "Continue jogando para descobrir."}</span></div>`;
+    }).join("");
+  }
+  function openAch(open) { renderAch(); $("#ach-panel").hidden = !open; }
+
+  // ---------------------------------------------------------------------------
+  // Lamp: the cursor is the doctor's lamp (the game's vision cone)
+  // ---------------------------------------------------------------------------
+  const lamp = $("#lamp");
+  const root = document.documentElement;
+  let lampOn = !window.matchMedia("(hover: none)").matches;
+  function setLamp(on) {
+    lampOn = on;
+    lamp.classList.toggle("off", !on);
+    $$("[data-lamp]").forEach(b => b.setAttribute("aria-pressed", String(on)));
+  }
+  window.addEventListener("pointermove", (e) => {
+    root.style.setProperty("--mx", e.clientX + "px");
+    root.style.setProperty("--my", e.clientY + "px");
+  }, { passive: true });
+  function blackout(ms) {
+    if (reduced) return;
+    lamp.classList.add("dark");
+    setTimeout(() => lamp.classList.remove("dark"), ms);
+  }
+  // Occasional lamp flicker, like a failing generator.
+  (function flickerLoop() {
+    if (reduced) return;
+    setTimeout(() => {
+      if (lampOn) {
+        lamp.classList.add("flick");
+        setTimeout(() => lamp.classList.remove("flick"), 90);
+        setTimeout(() => { lamp.classList.add("flick"); setTimeout(() => lamp.classList.remove("flick"), 60); }, 180);
+      }
+      flickerLoop();
+    }, 9000 + Math.random() * 14000);
+  })();
+
+  // Film grain generated once on a small canvas.
+  (function makeGrain() {
+    try {
+      const c = document.createElement("canvas"); c.width = c.height = 160;
+      const g = c.getContext("2d"), img = g.createImageData(160, 160);
+      for (let i = 0; i < img.data.length; i += 4) { const v = Math.random() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
+      g.putImageData(img, 0, 0);
+      $("#grain").style.backgroundImage = `url(${c.toDataURL()})`;
+    } catch (e) { /* no grain */ }
+  })();
+
+  // ---------------------------------------------------------------------------
+  // Wiring
+  // ---------------------------------------------------------------------------
+  $("#start-btn").addEventListener("click", () => { sfx.knock(); blackout(500); setTimeout(() => { show("map"); unlock("porta"); }, 250); });
+  $("#ach-btn").addEventListener("click", () => openAch(true));
+  $("#fin-ach-btn").addEventListener("click", () => openAch(true));
+  $("#ach-close").addEventListener("click", () => openAch(false));
+  $("#ach-panel").addEventListener("click", (e) => { if (e.target.id === "ach-panel") openAch(false); });
+  $("#to-map").addEventListener("click", () => { sfx.tick(); show("map"); });
+  $("#next-btn").addEventListener("click", next);
+  $("#prev-btn").addEventListener("click", prev);
+  $("#fin-map").addEventListener("click", () => show("map"));
+  function reset() { state.done = []; state.ach = []; save(); show("map"); }
+  $("#reset-btn").addEventListener("click", reset);
+  $("#fin-reset").addEventListener("click", reset);
+
+  function setSound(on) {
+    soundOn = on;
+    $$("[data-sound]").forEach(b => b.setAttribute("aria-pressed", String(on)));
+  }
+  $$("[data-sound]").forEach(b => b.addEventListener("click", () => setSound(!soundOn)));
+  $$("[data-lamp]").forEach(b => b.addEventListener("click", () => setLamp(!lampOn)));
+
+  $$("[data-fs]").forEach(b => b.addEventListener("click", () => {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    } catch (e) { /* fullscreen unavailable */ }
+  }));
+
+  // Keyboard and presenter clickers (PageDown/PageUp) as a bonus to the mouse.
+  document.addEventListener("keydown", (e) => {
+    if (!$("#ach-panel").hidden) { if (e.key === "Escape") openAch(false); return; }
+    if (state.screen === "title" && ["Enter", " ", "ArrowRight", "PageDown"].includes(e.key)) { e.preventDefault(); $("#start-btn").click(); return; }
+    if (state.screen === "map" && ["Enter", "ArrowRight", "PageDown"].includes(e.key) && document.activeElement === document.body) {
+      e.preventDefault(); const n = nextIndex(); openStage(n === -1 ? STAGES.length - 1 : n); return;
+    }
+    if (state.screen !== "stage") return;
+    if (["ArrowRight", "PageDown"].includes(e.key)) { e.preventDefault(); next(); }
+    else if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); prev(); }
+    else if (e.key === "Escape") show("map");
+  });
+
+  let rz;
+  window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (state.screen === "map") renderMap(); sizeCanvas(); sizeFx(); }, 120); });
+
+  // ---------------------------------------------------------------------------
+  // Background: dust in the lamplight, a few embers, slow fog.
+  // ---------------------------------------------------------------------------
+  const cv = $("#bg"), cx = cv.getContext("2d");
+  let W = 0, H = 0, motes = [], fog = [];
+  function sizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const count = Math.round(Math.min(80, (W * H) / 18000));
+    motes = Array.from({ length: count }, () => mote(true));
+    fog = Array.from({ length: 5 }, (_, i) => ({ x: Math.random() * W, y: H * (0.55 + i * 0.1), r: Math.max(W, H) * (0.25 + Math.random() * 0.2), v: 0.08 + Math.random() * 0.12 }));
+  }
+  function mote(anywhere) {
+    return {
+      x: Math.random() * W, y: anywhere ? Math.random() * H : H + 10,
+      r: Math.random() * 1.6 + 0.3, vy: -(Math.random() * 0.25 + 0.05),
+      vx: (Math.random() - 0.5) * 0.12, a: Math.random() * 0.5 + 0.1,
+      ember: Math.random() < 0.15, ph: Math.random() * Math.PI * 2
+    };
+  }
+  function drawBg(t) {
+    cx.clearRect(0, 0, W, H);
+    for (const f of fog) {
+      f.x += f.v; if (f.x - f.r > W) f.x = -f.r;
+      const g = cx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r);
+      g.addColorStop(0, "rgba(120,104,84,0.06)"); g.addColorStop(1, "rgba(10,8,6,0)");
+      cx.fillStyle = g; cx.fillRect(f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
+    }
+    for (const m of motes) {
+      m.y += m.vy; m.x += m.vx + Math.sin(t / 1600 + m.ph) * 0.1;
+      if (m.y < -10) Object.assign(m, mote(false));
+      const flick = 0.7 + Math.sin(t / 300 + m.ph) * 0.3;
+      cx.beginPath(); cx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+      cx.fillStyle = m.ember ? `rgba(255,158,82,${m.a * flick})` : `rgba(234,223,200,${m.a * 0.3})`;
+      cx.fill();
+    }
+    if (!reduced) requestAnimationFrame(drawBg);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Boot (keeps progress across live updates of the artifact)
+  // ---------------------------------------------------------------------------
+  function start(data) {
+    load(data);
+    setLamp(lampOn);
+    sizeFx(); renderAch();
+    sizeCanvas();
+    requestAnimationFrame(drawBg);
+    if (data && data.screen && data.screen !== "title") {
+      if (data.screen === "stage" && Number.isInteger(data.stage)) {
+        openStage(data.stage); state.step = Math.min(data.step || 0, STAGES[data.stage].steps.length - 1); renderStep(1);
+      } else show(data.screen === "finale" ? "finale" : "map");
+    }
+  }
+  try { window.claude?.hot?.snapshot?.(() => ({ screen: state.screen, stage: state.stage, step: state.step, done: state.done })); } catch (e) { /* not in viewer */ }
+  if (window.claude?.hot?.ready) window.claude.hot.ready(start); else start(window.claude?.hot?.data ?? {});
+})();
+</script>
+
+</body>
+</html>
