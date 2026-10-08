@@ -421,6 +421,36 @@ img { display: block; }
 .toggle { justify-self: start; border-color: var(--entity); color: var(--entity); background: var(--entity-fill); }
 .toggle:hover { background: #1d272c; border-color: var(--entity); }
 
+/* LLM vs SLM comparison */
+.llmvs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: clamp(12px, 2vw, 28px); align-items: stretch; }
+.llmvs .vs { align-self: center; font-family: var(--display); font-size: var(--step-2); color: var(--text-faint); }
+.vside { padding: 1em 1.2em; display: grid; gap: .5em; align-content: start; min-width: 0; animation: drop .5s backwards; }
+.vside h3 { font-family: var(--display); font-size: var(--step-2); line-height: 1; }
+.vside .tag { font-size: .55em; letter-spacing: .2em; text-transform: uppercase; color: var(--text-faint); }
+.vside ul { margin: 0; padding-left: 1.1em; display: grid; gap: .3em; font-size: .8em; color: var(--text-soft); }
+.vside.small { border-color: var(--ember); box-shadow: 0 0 24px rgba(224,149,79,.2), inset 0 2px 10px rgba(0,0,0,.7); animation-delay: .2s; }
+.vside.small h3 { color: var(--ember); }
+/* Behavior Tree vs GOAP */
+.vrows { display: grid; gap: .35em; font-size: .78em; color: var(--text-soft); }
+.vrows b { color: var(--text); font-weight: normal; }
+.bg-act { display: flex; justify-content: center; }
+.bg-res { display: none; border-left: 3px solid; padding: .6em .8em; font-size: .72em; gap: .35em; animation: beat-in .4s; }
+.bg-res code { font-family: var(--mono); font-size: .95em; white-space: pre-wrap; color: var(--entity); }
+.bg-res.bt { border-color: var(--blood-lit); background: rgba(125,17,13,.18); }
+.bg-res.goap { border-color: var(--ember); background: rgba(224,149,79,.08); }
+.llmvs.armed .bg-res { display: grid; }
+/* three eras of NPC AI */
+.eras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 28px); counter-reset: era; }
+.era { border-top: 2px solid var(--line-strong); padding-top: .8em; display: grid; gap: .4em; align-content: start; min-width: 0; animation: drop .5s backwards; }
+.era:nth-child(2) { animation-delay: .15s; } .era:nth-child(3) { animation-delay: .3s; border-color: var(--entity); }
+.era .when { font-size: .55em; letter-spacing: .2em; text-transform: uppercase; color: var(--ember); }
+.era h3 { font-family: var(--display); font-size: var(--step-2); line-height: 1; }
+.era:nth-child(3) h3 { color: var(--entity); }
+.era p { color: var(--text-soft); font-size: .85em; }
+.era .lim { color: var(--blood); font-size: .72em; }
+.schema-note { display: flex; flex-wrap: wrap; gap: .6em 1em; align-items: center; font-size: .75em; color: var(--text-soft); }
+.schema-note code { font-family: var(--mono); color: var(--entity); background: #050405; border: 1px solid var(--line); padding: .3em .6em; }
+@media (max-width: 700px) { .llmvs, .eras { grid-template-columns: minmax(0, 1fr); } .llmvs .vs { justify-self: center; } }
 .pillars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 28px); }
 .pillar { border-top: 2px solid var(--entity); padding-top: .8em; display: grid; gap: .4em; align-content: start; min-width: 0; }
 .pillar h3 { font-family: var(--display); font-size: var(--step-2); line-height: 1; color: var(--entity); }
@@ -1135,6 +1165,16 @@ img { display: block; }
         },
         {
           html: `
+            <span class="eyebrow">Grande ou pequeno?</span>
+            <h2 class="mid">O NPC do futuro roda num <em>modelo pequeno</em></h2>
+            <div class="llmvs">
+              <div class="vside panel"><span class="tag">LLM &middot; Large Language Model</span><h3>Na nuvem</h3><ul><li><strong>Modelo de linguagem grande.</strong> Centenas de bilhões de parâmetros, em data centers.</li><li>Ótimo para te ajudar a programar.</li><li>No NPC: custo por fala e espera que pode chegar a segundos.</li></ul></div>
+              <span class="vs">vs</span>
+              <div class="vside panel small"><span class="tag">SLM &middot; Small Language Model</span><h3>No PC do jogador</h3><ul><li><strong>Modelo de linguagem pequeno.</strong> De 1 a 8 bilhões de parâmetros, comprimidos.</li><li>Roda na placa de vídeo ou no chip de IA do celular.</li><li>Sem servidor, sem mensalidade e sem depender de internet.</li></ul></div>
+            </div>`
+        },
+        {
+          html: `
             <span class="eyebrow">IA em casa, de graça e offline</span>
             <h2 class="mid">Rode um modelo aberto <em>no seu próprio PC</em></h2>
             <div class="models">
@@ -1223,6 +1263,45 @@ img { display: block; }
               $$("#eye1, #eye2", el).forEach(c => c.setAttribute("fill", ai ? "#aebcc2" : "#b9a98d"));
               ai ? sfx.open() : sfx.tick();
               say(ai ? "Hm. Eu lembro de você. O que quer agora?" : "Saudações, viajante. Em que posso ajudar?", ai ? ["memória ativada"] : [], "entity");
+            });
+          }
+        },
+        {
+          html: `
+            <span class="eyebrow">A evolução dos NPCs</span>
+            <h2 class="mid">Três eras da <em>inteligência</em> dos personagens</h2>
+            <div class="eras">
+              <div class="era"><span class="when">Clássica</span><h3>Máquina de estados</h3><span class="when" style="color:var(--text-faint)">FSM &middot; Finite State Machine</span><p>Patrulhar, perseguir, atacar. Estados fixos e transições rígidas.</p><span class="lim">Cada comportamento novo multiplica as transições.</span></div>
+              <div class="era"><span class="when">Intermediária</span><h3>Behavior Trees e GOAP</h3><p>Árvores de decisão e GOAP (<em>Goal-Oriented Action Planning</em>), o planejamento de ações por metas.</p><span class="lim">Parece esperto, mas é previsível.</span></div>
+              <div class="era"><span class="when">Nova geração</span><h3>Modelos de linguagem</h3><p>Entende o que o jogador diz e decide a resposta na hora.</p><span class="lim">Latência, memória e risco de alucinação.</span></div>
+            </div>`
+        },
+        {
+          html: `
+            <span class="eyebrow">Behavior Tree vs GOAP</span>
+            <h2 class="mid">Seguir o roteiro ou <em>planejar sozinho</em>?</h2>
+            <div class="llmvs" id="btgoap">
+              <div class="vside panel"><span class="tag">Behavior Tree &middot; árvore de comportamento</span><h3>Reage</h3>
+                <div class="vrows"><span><b>Pergunta:</b> o que eu faço com o que vejo agora?</span><span><b>Autoria:</b> o programador desenha cada caminho.</span><span><b>Previsível:</b> faz exatamente o que a árvore manda.</span><span><b>Exemplos:</b> Halo 2, Spore, Unreal Engine.</span></div>
+                <div class="bg-res bt"><strong>Granada na árvore:</strong><span>Abrir a árvore, achar o Selector de combate, criar uma Sequence e encaixar 4 condições na ordem certa. Errou o galho? O inimigo joga uma granada que não tem.</span></div>
+              </div>
+              <span class="vs">vs</span>
+              <div class="vside panel small"><span class="tag">GOAP &middot; Goal-Oriented Action Planning</span><h3>Planeja</h3>
+                <div class="vrows"><span><b>Pergunta:</b> qual é a minha meta e como chego nela?</span><span><b>Autoria:</b> ações soltas com pré-condição, efeito e custo.</span><span><b>Emergente:</b> combina ações de jeitos não previstos.</span><span><b>Exemplos:</b> F.E.A.R., S.T.A.L.K.E.R., Tomb Raider (2013).</span></div>
+                <div class="bg-res goap"><strong>Granada no GOAP:</strong><code>AcaoJogarGranadaDeLuz
+  pré: tem_granada, distância &lt; 15
+  efeito: jogador_cego
+  custo: 3</code><span>Nada existente é alterado. O planejador percebe que cegar ajuda a vencer e usa a granada sozinho.</span></div>
+              </div>
+            </div>
+            <div class="bg-act"><button class="btn primary" id="bg-btn">Adicionar uma granada de luz</button></div>`,
+          mount(el) {
+            $("#bg-btn", el).addEventListener("click", (e) => {
+              const box = $("#btgoap", el);
+              if (box.classList.contains("armed")) return;
+              box.classList.add("armed"); sfx.good(); jolt();
+              burst($(".bg-res.goap", el), 24); pop(e, "+1 ação");
+              e.currentTarget.textContent = "Granada adicionada";
             });
           }
         },
@@ -1343,7 +1422,8 @@ img { display: block; }
               <div class="rule panel"><span class="x">&times;</span><h3>Quebrar a quarta parede</h3><p>O NPC não sabe que está num jogo. Nada de "pixels", "mouse" ou "engine".</p></div>
               <div class="rule panel"><span class="x">&times;</span><h3>Promessas falsas</h3><p>Não pode dar itens que não existem no código, como "1000 de vida" ou uma bazuca.</p></div>
               <div class="rule panel"><span class="x">&times;</span><h3>Fugir da narrativa</h3><p>O horror é permitido. Discurso de ódio real, não.</p></div>
-            </div>`
+            </div>
+            <p class="schema-note"><span>Na prática, a IA responde num formato obrigatório (JSON Schema, o molde de um <em>JavaScript Object Notation</em>), e o código só executa o que reconhece:</span><code>{"acao": "atacar", "alvo": "jogador"}</code></p>`
         },
         {
           html: `
@@ -1607,7 +1687,7 @@ img { display: block; }
   // Juice: sparks, floating text, screen jolt, achievements
   // ---------------------------------------------------------------------------
   let justLit = false;
-  const LOC = 1836; // real line count of this file
+  const LOC = 1916; // real line count of this file
   const fx = $("#fx"), fxc = fx.getContext("2d");
   let sparks = [], fxRunning = false;
   function sizeFx() {
